@@ -505,5 +505,330 @@ oc new-app --template=mysql-persistent</pre>
 </table>
 <div class="tip"><strong>💡 OpenShift Internal Registry:</strong> OpenShift has a built-in registry at <code>image-registry.openshift-image-registry.svc:5000</code>. Builds push here automatically; pods pull from it using internal service account credentials.</div>
 `},
+
+{id:'advanced-cli', label:'⚡ Advanced CLI Reference', content:`
+<h3>Advanced oc / kubectl Commands</h3>
+<p>Power-user commands for day-to-day cluster operations — debugging, introspection, patching, and live manipulation.</p>
+
+<h4>Port-Forwarding &amp; Local Access</h4>
+<pre><code><span class="c"># Forward local port 8080 → pod port 8080 (bypass Routes entirely)</span>
+oc port-forward pod/&lt;name&gt; 8080:8080
+
+<span class="c"># Forward to a Service (round-robins to a random pod)</span>
+oc port-forward svc/&lt;name&gt; 5432:5432
+
+<span class="c"># Forward multiple ports at once</span>
+oc port-forward pod/&lt;name&gt; 8080:8080 9090:9090
+
+<span class="c"># Bind to all interfaces (accessible from your LAN)</span>
+oc port-forward --address 0.0.0.0 svc/prometheus-operated 9090:9090 -n openshift-monitoring
+
+<span class="c"># Background it; kill when done</span>
+oc port-forward svc/mydb 5432:5432 &amp;
+kill %1</code></pre>
+
+<h4>Exec, RSH &amp; Debug</h4>
+<pre><code><span class="c"># Interactive shell in a running container</span>
+oc rsh &lt;pod&gt;
+oc exec -it &lt;pod&gt; -- /bin/bash
+oc exec -it &lt;pod&gt; -c &lt;container&gt; -- sh    <span class="c"># specific container</span>
+
+<span class="c"># One-off command</span>
+oc exec &lt;pod&gt; -- env | sort
+oc exec &lt;pod&gt; -- curl -s http://localhost:8080/healthz
+
+<span class="c"># Debug a CRASHED pod (spawns copy, overrides entrypoint)</span>
+oc debug pod/&lt;name&gt;
+oc debug node/&lt;node-name&gt;          <span class="c"># then: chroot /host</span>
+oc debug deployment/&lt;name&gt;
+oc debug &lt;pod&gt; --image=nicolaka/netshoot
+oc debug &lt;pod&gt; --as-root</code></pre>
+
+<h4>File Transfer</h4>
+<pre><code><span class="c"># Copy TO a pod</span>
+oc cp ./localfile.txt &lt;pod&gt;:/tmp/file.txt
+
+<span class="c"># Copy FROM a pod</span>
+oc cp &lt;pod&gt;:/var/log/app.log ./app.log
+oc cp &lt;pod&gt;:/tmp/heapdump.hprof ./dumps/
+
+<span class="c"># rsync (faster for directories, requires rsync in container)</span>
+oc rsync ./src/ &lt;pod&gt;:/app/src/ --delete
+oc rsync &lt;pod&gt;:/app/data/ ./local-data/</code></pre>
+
+<h4>Logs — Advanced Flags</h4>
+<pre><code><span class="c"># Previous crashed container</span>
+oc logs &lt;pod&gt; --previous
+
+<span class="c"># Time-bounded</span>
+oc logs &lt;pod&gt; --since=1h
+oc logs &lt;pod&gt; --since-time='2026-06-01T00:00:00Z'
+oc logs &lt;pod&gt; --tail=100
+
+<span class="c"># Stream ALL pods matching a label simultaneously</span>
+oc logs -l app=myapp --all-containers=true -f --max-log-requests=10</code></pre>
+
+<h4>Patching &amp; Live Updates</h4>
+<pre><code><span class="c"># Strategic merge patch</span>
+oc patch deployment/myapp -p '{"spec":{"replicas":5}}'
+
+<span class="c"># JSON patch (array operations)</span>
+oc patch svc/myapp --type=json \
+  -p '[{"op":"replace","path":"/spec/type","value":"LoadBalancer"}]'
+
+<span class="c"># Rolling image update</span>
+oc set image deployment/myapp app=myimage:v2.0
+
+<span class="c"># Set resources, env, secrets inline</span>
+oc set resources deployment/myapp --requests=cpu=100m,memory=128Mi --limits=cpu=500m,memory=256Mi
+oc set env deployment/myapp LOG_LEVEL=debug
+oc set env deployment/myapp --from=secret/my-secret
+oc set env deployment/myapp --from=configmap/app-config
+
+<span class="c"># Scale to zero and back</span>
+oc scale deployment/myapp --replicas=0
+oc scale deployment/myapp --replicas=3</code></pre>
+
+<h4>Output Formatting &amp; JSONPath</h4>
+<pre><code><span class="c"># Custom columns</span>
+oc get pods -o custom-columns=\
+NAME:.metadata.name,\
+STATUS:.status.phase,\
+NODE:.spec.nodeName,\
+IP:.status.podIP
+
+<span class="c"># JSONPath — extract specific fields</span>
+oc get pod &lt;name&gt; -o jsonpath='{.status.podIP}'
+oc get pods -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\n"}{end}'
+
+<span class="c"># Which SCC is assigned to a pod?</span>
+oc get pod &lt;name&gt; -o jsonpath='{.metadata.annotations.openshift\.io/scc}'
+
+<span class="c"># Sort events by time (most useful debug command)</span>
+oc get events --sort-by='.lastTimestamp'
+oc get events --sort-by='.lastTimestamp' --field-selector type=Warning</code></pre>
+
+<h4>Dry-run, Diff &amp; Wait</h4>
+<pre><code><span class="c"># Validate without applying</span>
+oc apply -f manifest.yaml --dry-run=client    <span class="c"># local only</span>
+oc apply -f manifest.yaml --dry-run=server    <span class="c"># hits webhooks + quota</span>
+oc diff -f manifest.yaml                      <span class="c"># what WOULD change</span>
+
+<span class="c"># Scaffold YAML from imperative commands</span>
+oc create deployment myapp --image=nginx --dry-run=client -o yaml &gt; deployment.yaml
+
+<span class="c"># Wait for conditions (scriptable)</span>
+oc wait pod/&lt;name&gt; --for=condition=Ready --timeout=60s
+oc wait deployment/myapp --for=condition=Available --timeout=120s
+oc rollout status deployment/myapp --timeout=5m
+
+<span class="c"># Rollout history + undo</span>
+oc rollout history deployment/myapp
+oc rollout undo deployment/myapp
+oc rollout undo deployment/myapp --to-revision=3</code></pre>
+
+<div class="tip"><strong>💡 Tip:</strong> Chain wait with restart for zero-touch rollouts in scripts: <code>oc rollout restart deployment/myapp &amp;&amp; oc rollout status deployment/myapp --timeout=5m</code></div>
+`},
+
+{id:'debug-workflows', label:'🔬 Debug &amp; Troubleshoot Workflows', content:`
+<h3>Systematic Debugging Workflows</h3>
+<p>Step-by-step investigation playbooks for the most common production issues.</p>
+
+<h4>CrashLoopBackOff</h4>
+<pre><code><span class="c"># 1. Confirm restart count + exit code</span>
+oc describe pod &lt;name&gt; | grep -A 10 "Last State\|Exit Code"
+
+<span class="c"># 2. Read the crashed instance's logs</span>
+oc logs &lt;pod&gt; --previous
+
+<span class="c"># 3. Check events</span>
+oc describe pod &lt;name&gt; | grep -A 10 Events
+
+<span class="c"># 4. Spawn a debug shell (same image, no entrypoint = no crash)</span>
+oc debug pod/&lt;name&gt;
+
+<span class="c"># Inside debug shell: verify config, connectivity</span>
+env | grep -i "db\|pass\|secret\|url"
+ls /app/config/
+nc -zv my-database 5432</code></pre>
+
+<h4>ImagePullBackOff / ErrImagePull</h4>
+<pre><code><span class="c"># 1. Which image? Which registry?</span>
+oc get pod &lt;name&gt; -o jsonpath='{.spec.containers[*].image}'
+oc describe pod &lt;name&gt; | grep "Failed\|Back-off"
+
+<span class="c"># 2. Check pull secrets on the ServiceAccount</span>
+oc get sa default -o yaml | grep imagePullSecrets -A 5
+oc get secret &lt;pull-secret&gt; -o jsonpath='{.data.\.dockerconfigjson}' | base64 -d | jq .
+
+<span class="c"># 3. Link a pull secret</span>
+oc secrets link default &lt;pull-secret&gt; --for=pull</code></pre>
+
+<h4>OOMKilled (Exit Code 137)</h4>
+<pre><code><span class="c"># 1. Confirm</span>
+oc get pod &lt;name&gt; -o jsonpath='{.status.containerStatuses[*].lastState.terminated.exitCode}'
+<span class="c"># Should be 137</span>
+
+<span class="c"># 2. Actual vs limit</span>
+oc adm top pod &lt;name&gt; --containers
+oc get pod &lt;name&gt; -o jsonpath='{.spec.containers[*].resources}'
+
+<span class="c"># 3. Raise the limit or let VPA do it</span>
+oc set resources deployment/&lt;name&gt; --limits=memory=512Mi</code></pre>
+
+<h4>Pod Stuck Pending</h4>
+<pre><code><span class="c"># Always start here</span>
+oc describe pod &lt;name&gt; | grep -A 20 Events
+
+<span class="c"># Insufficient resources?</span>
+oc adm top nodes
+oc describe nodes | grep -A 5 "Allocated resources"
+
+<span class="c"># PVC not bound?</span>
+oc get pvc
+oc describe pvc &lt;name&gt;
+
+<span class="c"># Node selector / affinity mismatch?</span>
+oc get pod &lt;name&gt; -o jsonpath='{.spec.nodeSelector}'
+oc get nodes --show-labels | grep &lt;required-label&gt;
+
+<span class="c"># Taint blocking schedule?</span>
+oc get nodes -o custom-columns=NAME:.metadata.name,TAINTS:.spec.taints
+
+<span class="c"># SCC rejection?</span>
+oc get events | grep "forbidden\|unable to validate"</code></pre>
+
+<h4>Network / Service Not Reachable</h4>
+<pre><code><span class="c"># Drop a debug pod with full network tools</span>
+oc run netshoot --image=nicolaka/netshoot -it --rm -- bash
+
+<span class="c"># DNS check</span>
+oc exec &lt;pod&gt; -- nslookup &lt;svc&gt;.&lt;ns&gt;.svc.cluster.local
+
+<span class="c"># TCP connectivity</span>
+oc exec &lt;pod&gt; -- nc -zv &lt;service&gt; &lt;port&gt;
+oc exec &lt;pod&gt; -- curl -sv http://&lt;service&gt;:&lt;port&gt;/healthz
+
+<span class="c"># NetworkPolicy blocking?</span>
+oc get networkpolicy -n &lt;namespace&gt;
+oc describe networkpolicy &lt;name&gt;</code></pre>
+
+<h4>Node-Level Debugging</h4>
+<pre><code>oc debug node/&lt;node-name&gt;
+chroot /host
+
+<span class="c"># Inside chroot:</span>
+systemctl status kubelet
+journalctl -u kubelet -f --since "10 min ago"
+crictl ps                  <span class="c"># running containers via CRI-O</span>
+crictl logs &lt;container-id&gt;
+df -h /var/lib/containers  <span class="c"># disk pressure?</span></code></pre>
+
+<div class="tip"><strong>💡 must-gather before escalating:</strong> <code>oc adm must-gather --dest-dir=./must-gather-$(date +%F)</code> — collects logs, events, resource state, and cluster config into a tar. Always attach this to support cases.</div>
+`},
+
+{id:'pro-tips', label:'🧠 Pro Tips &amp; Power Patterns', content:`
+<h3>Pro Tips for Expert Cluster Operators</h3>
+
+<h4>Built-in API Docs (no browser needed)</h4>
+<pre><code>oc explain pod.spec.containers
+oc explain deployment.spec.strategy.rollingUpdate
+oc explain networkpolicy.spec.ingress.ports
+oc explain --recursive pod.spec | grep -A 2 tolerations
+
+<span class="c"># Discover all API resources</span>
+oc api-resources --namespaced=true
+oc api-resources --api-group=route.openshift.io
+oc api-resources -o wide    <span class="c"># shows verbs + shortnames</span></code></pre>
+
+<h4>Field Selectors &amp; Label Gymnastics</h4>
+<pre><code><span class="c"># Field selector (spec/status fields)</span>
+oc get pods --field-selector=status.phase=Running
+oc get pods --field-selector=spec.nodeName=worker-1.example.com
+oc get events --field-selector=type=Warning,reason=OOMKilling
+
+<span class="c"># Label selector operators</span>
+oc get pods -l 'app!=myapp'
+oc get pods -l 'env in (prod,staging)'
+oc get pods -l 'app,!debug'    <span class="c"># has 'app' but NOT 'debug'</span>
+
+<span class="c"># Bulk-label pods on a node</span>
+oc get pods --field-selector=spec.nodeName=worker-1 -o name | \
+  xargs -I{} oc label {} drain-target=true</code></pre>
+
+<h4>Impersonation &amp; Auth Testing</h4>
+<pre><code><span class="c"># Test permissions without being the user</span>
+oc auth can-i get pods --as=system:serviceaccount:myproject:default
+oc auth can-i create deployments --as=jane --namespace=prod
+oc auth can-i '*' '*' --as=system:admin
+
+<span class="c"># Act as another user (admin only)</span>
+oc get pods --as=jane
+oc apply -f manifest.yaml --as=system:serviceaccount:myproject:ci-bot
+
+<span class="c"># Find all RoleBindings for a user</span>
+oc get rolebinding,clusterrolebinding -A -o json | \
+  jq -r '.items[] | select(.subjects[]?.name=="jane") | .metadata.namespace + "/" + .metadata.name'</code></pre>
+
+<h4>Resource Introspection</h4>
+<pre><code><span class="c"># Top resource consumers right now</span>
+oc adm top pods -A --sort-by=cpu | head -20
+oc adm top pods -A --sort-by=memory | head -20
+
+<span class="c"># Find pods with NO resource limits (risky in prod)</span>
+oc get pods -A -o json | jq -r '
+  .items[] |
+  select(.spec.containers[].resources.limits == null) |
+  .metadata.namespace + "/" + .metadata.name'
+
+<span class="c"># All unique images in use cluster-wide</span>
+oc get pods -A -o jsonpath=\
+'{range .items[*]}{range .spec.containers[*]}{.image}{"\n"}{end}{end}' | sort -u
+
+<span class="c"># Non-running pods</span>
+oc get pods -A --field-selector=status.phase!=Running | grep -v Completed</code></pre>
+
+<h4>Automation Patterns</h4>
+<pre><code><span class="c"># Restart ALL deployments in a namespace</span>
+oc get deployment -o name | xargs -I{} oc rollout restart {}
+
+<span class="c"># Delete all Evicted pods cluster-wide</span>
+oc get pods -A --field-selector=status.phase=Failed -o json | \
+  jq -r '.items[] | select(.status.reason=="Evicted") | .metadata.namespace + " " + .metadata.name' | \
+  xargs -n2 oc delete pod -n
+
+<span class="c"># Force-delete a stuck Terminating pod (last resort)</span>
+oc delete pod &lt;name&gt; --grace-period=0 --force
+
+<span class="c"># Short-lived SA token for API calls</span>
+TOKEN=$(oc create token my-sa --duration=1h)
+curl -H "Authorization: Bearer $TOKEN" \
+  https://$(oc whoami --show-server)/api/v1/namespaces/default/pods
+
+<span class="c"># Apply to multiple namespaces</span>
+for ns in prod staging dev; do oc apply -f configmap.yaml -n $ns; done</code></pre>
+
+<h4>Cluster Health at a Glance</h4>
+<pre><code><span class="c"># Any cluster operator degraded?</span>
+oc get co | grep -v "True.*False.*False"
+
+<span class="c"># MachineConfigPool update progress</span>
+oc get mcp
+
+<span class="c"># etcd health</span>
+oc get etcd -o=jsonpath='{range .items[0].status.conditions[*]}{.type}{" "}{.status}{"\n"}{end}'
+
+<span class="c"># Available cluster upgrades</span>
+oc adm upgrade
+
+<span class="c"># Node summary with kubelet version</span>
+oc get nodes -o custom-columns=\
+NAME:.metadata.name,\
+STATUS:.status.conditions[-1].type,\
+VERSION:.status.nodeInfo.kubeletVersion,\
+ARCH:.status.nodeInfo.architecture</code></pre>
+
+<div class="tip"><strong>💡 Golden rule:</strong> Always <code>oc diff -f &lt;file&gt;</code> before <code>oc apply</code> in production. Prefer <code>--dry-run=server</code> over <code>--dry-run=client</code> — it catches webhook rejections and quota violations before they hit.</div>
+`},
 ];
 
