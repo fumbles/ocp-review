@@ -1,0 +1,17 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: ocp-review-public
+  labels:
+    app: ocp-review
+spec:
+  host: ocp-review.yamlwrangler.com
+  wildcardPolicy: None
+  to:
+    kind: Service
+    name: ocp-review
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

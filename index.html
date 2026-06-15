@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OCP Mastery — OpenShift DO180 Learning Hub</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <div class="logo">OCP</div>
+    OCP Mastery
+  </div>
+  <div class="nav-links">
+    <button class="nav-link active" onclick="showPage('home')">Home</button>
+    <button class="nav-link" onclick="showPage('learn')">📚 Learn</button>
+    <button class="nav-link" onclick="showPage('flashcards')">🃏 Flashcards</button>
+    <button class="nav-link" onclick="showPage('walkthroughs')">🚀 Walkthroughs</button>
+    <button class="nav-link" onclick="showPage('glossary')">📖 Glossary</button>
+  </div>
+  <button class="theme-toggle" onclick="toggleTheme()">☀️ Light</button>
+</nav>
+<div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+<!-- HOME -->
+<div id="page-home" class="page active">
+  <div class="hero">
+    <div class="badge">DO180 · OpenShift 4.18 · Kubernetes</div>
+    <h1>Master <span>OpenShift</span> Administration</h1>
+    <p>Comprehensive study hub for Red Hat OpenShift Administration I — resources, definitions, examples, flashcards, and step-by-step walkthroughs aligned to DO180.</p>
+    <div class="hero-cards">
+      <div class="hero-card" onclick="showPage('learn')">
+        <div class="icon">📚</div>
+        <h3>Resource Library</h3>
+        <p>In-depth definitions, explanations, and CLI reference for every DO180 topic with real YAML examples.</p>
+      </div>
+      <div class="hero-card" onclick="showPage('flashcards')">
+        <div class="icon">🃏</div>
+        <h3>Flashcard Review</h3>
+        <p>100+ flashcards covering Kubernetes core concepts, OpenShift specifics, and exam-critical commands.</p>
+      </div>
+      <div class="hero-card" onclick="showPage('walkthroughs')">
+        <div class="icon">🚀</div>
+        <h3>Concept Walkthroughs</h3>
+        <p>Step-by-step guides for deploying apps, configuring networking, setting up storage, and more.</p>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-num">8</div><div class="stat-label">Topic Areas</div></div>
+      <div class="stat"><div class="stat-num">100+</div><div class="stat-label">Flashcards</div></div>
+      <div class="stat"><div class="stat-num">16</div><div class="stat-label">Walkthroughs</div></div>
+      <div class="stat"><div class="stat-num">DO180</div><div class="stat-label">Aligned</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- LEARN -->
+<div id="page-learn" class="page">
+  <div class="page-header">
+    <h2>Resource Library</h2>
+    <p>Select a topic to explore definitions, commands, and YAML examples.</p>
+  </div>
+  <div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="topic-search" placeholder="Search topics..." oninput="filterTopics(this.value)">
+  </div>
+  <div class="topic-grid">
+    <div class="topic-list" id="topic-list"></div>
+    <div class="topic-content" id="topic-content"></div>
+  </div>
+</div>
+
+<!-- FLASHCARDS -->
+<div id="page-flashcards" class="page">
+  <div class="page-header">
+    <h2>Flashcard Review</h2>
+    <p>Choose the correct answer, then read the explanation and docs link.</p>
+  </div>
+  <div class="flashcard-controls">
+    <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" onclick="setFilter('core',this)">K8s Core</button>
+    <button class="filter-btn" onclick="setFilter('ocp',this)">OpenShift</button>
+    <button class="filter-btn" onclick="setFilter('networking',this)">Networking</button>
+    <button class="filter-btn" onclick="setFilter('storage',this)">Storage</button>
+    <button class="filter-btn" onclick="setFilter('ha',this)">HA &amp; Reliability</button>
+    <button class="filter-btn" onclick="setFilter('cli',this)">CLI</button>
+    <div class="fc-counter">🔀 <a href="#" onclick="shuffleCards();return false" style="color:var(--text2)">Shuffle</a></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1rem">
+    <div class="fc-progress"><div class="fc-progress-fill" id="fc-progress-fill"></div></div>
+    <div class="mc-score-bar">
+      <span>Question <strong id="fc-idx">1</strong> of <strong id="fc-total">1</strong></span>
+      <span>✅ <strong id="fc-correct">0</strong> correct &nbsp;·&nbsp; ❌ <strong id="fc-wrong">0</strong> wrong</span>
+    </div>
+  </div>
+  <div class="mc-arena">
+    <div class="mc-question-card">
+      <div class="mc-q-label" id="mc-q-label">Question 1</div>
+      <div class="mc-q-text" id="mc-q-text"></div>
+      <div><span class="mc-q-tag" id="mc-q-tag"></span></div>
+    </div>
+    <div class="mc-options" id="mc-options"></div>
+    <div class="mc-result" id="mc-result">
+      <div class="mc-result-verdict" id="mc-verdict"></div>
+      <div class="mc-result-explanation" id="mc-explanation"></div>
+      <a class="mc-doc-link" id="mc-doc-link" href="#" target="_blank" rel="noopener">
+        📖 Read the documentation ↗
+      </a>
+      <div class="mc-bottom">
+        <span class="mc-spaced" id="mc-spaced"></span>
+        <button class="mc-next-btn" id="mc-next-btn" onclick="nextCard()">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GLOSSARY -->
+<div id="page-glossary" class="page">
+  <div class="page-header">
+    <h2>OCP &amp; Kubernetes Glossary</h2>
+    <p>Every object, acronym, and concept — from basic to SME level. Click any term to expand.</p>
+  </div>
+  <div class="gl-sticky-header">
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="glossary-search" placeholder="Search terms, acronyms, definitions..." oninput="filterGlossary(this.value)">
+    </div>
+    <div class="glossary-filters" id="glossary-filters"></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+    <span class="gl-count" id="gl-count"></span>
+    <button class="filter-btn" onclick="collapseAll()" style="margin-left:auto">Collapse all</button>
+  </div>
+  <div class="gl-layout">
+    <div class="gl-main">
+      <div class="glossary-grid" id="glossary-grid"></div>
+    </div>
+    <nav class="gl-sidebar" id="gl-sidebar" aria-label="Jump to letter"></nav>
+  </div>
+</div>
+
+<!-- WALKTHROUGHS -->
+<div id="page-walkthroughs" class="page">
+  <div class="page-header">
+    <h2>Concept Walkthroughs</h2>
+    <p>Step-by-step guides for core OpenShift administration tasks.</p>
+  </div>
+  <div id="wt-list">
+    <div class="wt-grid" id="wt-grid"></div>
+  </div>
+  <div class="wt-detail" id="wt-detail">
+    <button class="wt-back" onclick="showWtList()">← Back to walkthroughs</button>
+    <div id="wt-content"></div>
+  </div>
+</div>
+
+<!-- Data -->
+<script src="js/data/topics.js"></script>
+<script src="js/data/flashcards.js"></script>
+<script src="js/data/walkthroughs.js"></script>
+<script src="js/data/glossary.js"></script>
+<!-- App logic -->
+<script src="js/app.js"></script>
+</body>
+</html>
