@@ -902,7 +902,7 @@ oc auth can-i delete pods --as=bob   <span class="c"># should be no</span>
 oc auth can-i get pods --as=system:serviceaccount:myproject:my-app-sa`},
 ]},
 
-,{id:'taints-tolerations', title:'Taints, Tolerations & Node Selectors', desc:'Control exactly which nodes pods are scheduled on — reserve nodes for specific workloads, repel unwanted pods, and attract pods with node affinity.', steps:[
+{id:'taints-tolerations', title:'Taints, Tolerations & Node Selectors', desc:'Control exactly which nodes pods are scheduled on — reserve nodes for specific workloads, repel unwanted pods, and attract pods with node affinity.', steps:[
 {h:'Node Selectors — the simplest scheduling control',b:'A nodeSelector is a map of key-value labels on the node. The pod is only scheduled on nodes that have ALL the specified labels. Simple but inflexible — use nodeAffinity for more complex rules.',cmd:`<span class="c"># Label a node for GPU workloads</span>
 oc label node worker-3.example.com gpu=true accelerator=nvidia
 
