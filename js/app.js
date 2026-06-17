@@ -159,6 +159,7 @@ function showWalkthrough(id){
   const w=walkthroughs.find(x=>x.id===id);
   document.getElementById('wt-list').style.display='none';
   document.getElementById('wt-detail').classList.add('active');
+  window.scrollTo(0,0);
   document.getElementById('wt-content').innerHTML=`
     <h3 style="font-size:1.5rem;margin-bottom:.5rem">${w.title}</h3>
     <p style="color:var(--text2);margin-bottom:1.75rem">${w.desc}</p>
