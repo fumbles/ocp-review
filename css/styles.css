@@ -102,7 +102,7 @@ nav{position:sticky;top:0;z-index:100;background:var(--bg2);border-bottom:1px so
 .definition-card p{color:var(--text2);font-size:.875rem;line-height:1.6}
 .definition-card code{background:var(--code-bg);border:1px solid var(--border);padding:.1rem .35rem;border-radius:4px;font-family:monospace;font-size:.82rem;color:var(--code-accent)}
 code{background:var(--code-bg);border:1px solid var(--border);padding:.1rem .35rem;border-radius:4px;font-family:monospace;font-size:.82rem;color:var(--code-accent)}
-pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;overflow-x:auto;margin:.75rem 0;font-family:'Courier New',monospace;font-size:.84rem;line-height:1.7;color:var(--code-text)}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;overflow-x:auto;white-space:pre-wrap;word-break:break-all;margin:.75rem 0;font-family:'Courier New',monospace;font-size:.84rem;line-height:1.7;color:var(--code-text)}
 pre .c{color:var(--code-comment);font-style:italic}
 pre .k{color:var(--code-keyword);font-weight:600}
 pre .s{color:var(--code-string)}

@@ -1542,4 +1542,124 @@ oc get builds -l buildconfig=webapp-docker
 <span class="c"># Promote image: tag 'latest' as 'production'</span>
 oc tag webapp:latest webapp:production`},
 ]},
+
+{id:'service-account-tokens', title:'Create Expiring Service Account Tokens for Customer Access', desc:'Generate short-lived kubeconfig tokens for customers or support workflows — namespace-scoped, multi-namespace with CRD access, or cluster-reader — with a fixed expiry window.', steps:[
+{h:'Understand the token model',b:'Since OCP 4.11, <code>oc create token</code> generates bound, short-lived tokens (RFC 8693) tied to a ServiceAccount. They expire automatically — no cleanup needed. The old <code>kubernetes.io/service-account-token</code> Secrets still exist but are deprecated. Always prefer <code>oc create token --duration</code> for customer handoffs.',cmd:`<span class="c"># Anatomy of the command</span>
+oc create token &lt;service-account&gt; \\
+  -n &lt;namespace&gt; \\
+  --duration=&lt;Nh&gt;    <span class="c"># e.g. 8h, 24h, 48h</span>
+
+<span class="c"># Inspect a token without using it</span>
+oc create token support-ro -n myapp --duration=1h | \\
+  python3 -c "import sys,base64,json; p=sys.stdin.read().strip().split('.')[1]; print(json.dumps(json.loads(base64.b64decode(p+'==').decode()),indent=2))"
+
+<span class="c"># Check expiry fields: iat (issued at), exp (expiry) — both Unix timestamps</span>`},
+
+{h:'Pattern 1 — Namespace-scoped read-only access',b:'Create a ServiceAccount, bind the built-in <code>view</code> ClusterRole within a single namespace, then issue a token. The customer can only read resources in that one namespace — pods, logs, events, configmaps, etc.',cmd:`<span class="c"># 1. Create the ServiceAccount</span>
+oc create sa support-ro -n myapp
+
+<span class="c"># 2. Bind view role (read-only) within the namespace</span>
+oc adm policy add-role-to-user view \\
+  system:serviceaccount:myapp:support-ro \\
+  -n myapp
+
+<span class="c"># 3. Issue an 8-hour token</span>
+TOKEN=$(oc create token support-ro -n myapp --duration=8h)
+
+<span class="c"># 4. Build a kubeconfig for the customer</span>
+oc config view --minify --raw > /tmp/customer.kubeconfig
+kubectl --kubeconfig=/tmp/customer.kubeconfig config set-credentials support-ro --token="$TOKEN"
+kubectl --kubeconfig=/tmp/customer.kubeconfig config set-context --current --user=support-ro
+echo "Token expires in 8h. Kubeconfig: /tmp/customer.kubeconfig"`},
+
+{h:'Pattern 2 — Several namespaces + reading CRDs',b:'When a customer needs visibility across multiple namespaces and the ability to read CustomResourceDefinitions (cluster-scoped), you need a ClusterRole with CRD read permissions plus RoleBindings in each target namespace.',cmd:`<span class="c"># 1. Create the ServiceAccount (pick any namespace as home)</span>
+oc create sa support-multi -n support-tools
+
+<span class="c"># 2. Create a ClusterRole that allows reading CRDs (cluster-scoped)</span>
+cat &lt;&lt;EOF | oc apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: support-crd-reader
+rules:
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["get","list","watch"]
+EOF
+
+<span class="c"># 3. ClusterRoleBinding for CRD access only</span>
+oc adm policy add-cluster-role-to-user support-crd-reader \\
+  system:serviceaccount:support-tools:support-multi
+
+<span class="c"># 4. Namespace-level view access in each target namespace</span>
+for NS in app-team-a app-team-b platform-ops; do
+  oc adm policy add-role-to-user view \\
+    system:serviceaccount:support-tools:support-multi \\
+    -n $NS
+done
+
+<span class="c"># 5. Issue a 24-hour token</span>
+oc create token support-multi -n support-tools --duration=24h`},
+
+{h:'Pattern 3 — Cluster-reader (full read-only cluster view)',b:'<code>cluster-reader</code> is a built-in OCP ClusterRole that grants read access to almost everything cluster-wide — all namespaces, nodes, operators, routes, SCCs, and most CRDs. Use this for escalated support cases where the customer or engineer needs a full cluster snapshot.',cmd:`<span class="c"># 1. Create the ServiceAccount</span>
+oc create sa support-cluster -n support-tools
+
+<span class="c"># 2. Bind cluster-reader — this is cluster-wide, use carefully</span>
+oc adm policy add-cluster-role-to-user cluster-reader \\
+  system:serviceaccount:support-tools:support-cluster
+
+<span class="c"># 3. Issue a time-boxed token (recommend ≤ 24h for cluster-reader)</span>
+oc create token support-cluster -n support-tools --duration=24h
+
+<span class="c"># Verify what the token can see</span>
+oc auth can-i --list --as=system:serviceaccount:support-tools:support-cluster | head -20`},
+
+{h:'Build and deliver the kubeconfig',b:'Package the token into a kubeconfig file the customer can drop in and use immediately with <code>oc</code> or <code>kubectl</code>. Always communicate the expiry window explicitly.',cmd:`<span class="c"># Capture current cluster API URL</span>
+API=$(oc whoami --show-server)
+TOKEN=$(oc create token support-cluster -n support-tools --duration=24h)
+CACERT=$(oc config view --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}')
+
+<span class="c"># Write a self-contained kubeconfig</span>
+cat &lt;&lt;EOF > /tmp/customer-access.kubeconfig
+apiVersion: v1
+kind: Config
+clusters:
+- name: ocp-cluster
+  cluster:
+    server: $API
+    certificate-authority-data: $CACERT
+users:
+- name: support-token
+  user:
+    token: $TOKEN
+contexts:
+- name: support
+  context:
+    cluster: ocp-cluster
+    user: support-token
+current-context: support
+EOF
+
+echo "Deliver /tmp/customer-access.kubeconfig — expires in 24h"
+echo "Customer usage: export KUBECONFIG=/tmp/customer-access.kubeconfig"
+echo "                oc get pods -A"`},
+
+{h:'Verify and revoke',b:'Test the token before handing it to the customer. To revoke early (before expiry), delete the ServiceAccount — all tokens bound to it immediately become invalid.',cmd:`<span class="c"># Test the token permissions</span>
+oc auth can-i get pods -n myapp \\
+  --as=system:serviceaccount:support-tools:support-cluster
+
+oc auth can-i create deployments -n myapp \\
+  --as=system:serviceaccount:support-tools:support-cluster
+<span class="c"># → "no" — read-only confirmed</span>
+
+<span class="c"># Check token expiry from within a running pod using the token</span>
+oc whoami --token="$TOKEN"
+
+<span class="c"># Early revocation — delete the SA to invalidate all its tokens immediately</span>
+oc delete sa support-cluster -n support-tools
+
+<span class="c"># Or remove just the role binding to reduce scope without deleting the SA</span>
+oc adm policy remove-cluster-role-from-user cluster-reader \\
+  system:serviceaccount:support-tools:support-cluster`},
+]},
 ];

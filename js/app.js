@@ -217,7 +217,9 @@ let glossaryInit=false;
 const GL_CATS={
   all:'All',core:'K8s Core',ocp:'OpenShift',operators:'Operators & OLM',
   networking:'Networking',storage:'Storage',security:'Security',
-  monitoring:'Monitoring',builds:'Builds & CI/CD',advanced:'Advanced / Platform',acronym:'Acronyms'
+  monitoring:'Monitoring',builds:'Builds & CI/CD',advanced:'Advanced / Platform',
+  odf:'Data Foundation (ODF)',backup:'Backup & Restore',virt:'Virtualization',
+  multicluster:'Multi-Cluster (ACM)',acronym:'Acronyms'
 };
 
 function initGlossary(){
