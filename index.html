@@ -2,9 +2,14 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>OCP Mastery — OpenShift DO180 Learning Hub</title>
 <link rel="stylesheet" href="css/styles.css">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='32' cy='32' r='23' fill='none' stroke='%23e11d2e' stroke-width='11' stroke-dasharray='108 42' stroke-linecap='butt' transform='rotate(-18 32 32)'/%3E%3Crect x='41' y='12' width='18' height='5.5' rx='2.75' fill='%23b91c3b' transform='rotate(-21 50 14.75)'/%3E%3Crect x='7' y='35' width='18' height='5.5' rx='2.75' fill='%23b91c3b' transform='rotate(-21 16 37.75)'/%3E%3Crect x='13' y='44' width='16' height='5' rx='2.5' fill='%23b91c3b' transform='rotate(-24 21 46.5)'/%3E%3C/svg%3E">
+<!-- Apply saved theme before paint to avoid flash -->
+<script>
+  (function(){var t=localStorage.getItem('ocp-theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
+</script>
 </head>
 <body>
 
@@ -18,6 +23,7 @@
     </svg>
     OCP Mastery
   </div>
+  <!-- Desktop links -->
   <div class="nav-links">
     <button class="nav-link active" onclick="showPage('home')">Home</button>
     <button class="nav-link" onclick="showPage('learn')">📚 Learn</button>
@@ -27,8 +33,38 @@
     <button class="nav-link" onclick="showPage('troubleshooting')">🔧 Troubleshooting</button>
   </div>
   <button class="theme-toggle" onclick="toggleTheme()">☀️ Light</button>
+  <!-- Mobile hamburger -->
+  <button class="mob-menu-btn" onclick="toggleNav()" aria-label="Open menu">&#9776;</button>
 </nav>
 <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+<!-- Mobile slide-in drawer -->
+<div class="mob-overlay" id="mob-overlay" onclick="closeNav()"></div>
+<div class="mob-drawer" id="mob-drawer">
+  <div class="mob-drawer-header">
+    <span class="mob-drawer-brand">OCP Mastery</span>
+    <button class="mob-drawer-close" onclick="closeNav()" aria-label="Close menu">✕</button>
+  </div>
+  <button class="mob-drawer-link" onclick="showPage('home')">🏠 Home</button>
+  <button class="mob-drawer-link" onclick="showPage('learn')">📚 Resource Library</button>
+  <button class="mob-drawer-link" onclick="showPage('flashcards')">🃏 Flashcard Review</button>
+  <button class="mob-drawer-link" onclick="showPage('walkthroughs')">🚀 Walkthroughs</button>
+  <button class="mob-drawer-link" onclick="showPage('glossary')">📖 Glossary</button>
+  <button class="mob-drawer-link" onclick="showPage('troubleshooting')">🔧 Troubleshooting</button>
+  <div class="mob-drawer-footer">
+    <button class="theme-toggle" onclick="toggleTheme()">☀️ Light</button>
+  </div>
+</div>
+
+<!-- Mobile bottom tab bar -->
+<nav class="mob-tabbar" aria-label="Mobile navigation">
+  <button class="mob-tab active" data-page="home"          onclick="showPage('home')">🏠<span>Home</span></button>
+  <button class="mob-tab"        data-page="learn"         onclick="showPage('learn')">📚<span>Learn</span></button>
+  <button class="mob-tab"        data-page="flashcards"    onclick="showPage('flashcards')">🃏<span>Cards</span></button>
+  <button class="mob-tab"        data-page="walkthroughs"  onclick="showPage('walkthroughs')">🚀<span>Walks</span></button>
+  <button class="mob-tab"        data-page="troubleshooting" onclick="showPage('troubleshooting')">🔧<span>Debug</span></button>
+  <button class="mob-tab"        data-page="glossary"      onclick="showPage('glossary')">📖<span>Glossary</span></button>
+</nav>
 
 <!-- HOME -->
 <div id="page-home" class="page active">

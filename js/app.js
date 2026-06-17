@@ -1,25 +1,54 @@
 // ─── THEME ───────────────────────────────────────────────────────────────────
-function toggleTheme(){
-  const html=document.documentElement;
-  const dark=html.getAttribute('data-theme')==='dark';
-  html.setAttribute('data-theme',dark?'light':'dark');
-  document.querySelector('.theme-toggle').textContent=dark?'🌙 Dark':'☀️ Light';
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme',theme);
+  document.querySelectorAll('.theme-toggle').forEach(btn=>{
+    btn.textContent=theme==='dark'?'☀️ Light':'🌙 Dark';
+  });
 }
+function toggleTheme(){
+  const current=document.documentElement.getAttribute('data-theme');
+  const next=current==='dark'?'light':'dark';
+  localStorage.setItem('ocp-theme',next);
+  applyTheme(next);
+}
+// Apply saved theme immediately (before first paint)
+(function(){
+  const saved=localStorage.getItem('ocp-theme');
+  if(saved) applyTheme(saved);
+})();
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
+const PAGES=['home','learn','flashcards','walkthroughs','glossary','troubleshooting'];
 function showPage(id){
+  if(!document.getElementById('page-'+id)) return; // guard against stale cached HTML
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
+  document.querySelectorAll('.mob-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  const idx=['home','learn','flashcards','walkthroughs','glossary','troubleshooting'].indexOf(id);
-  document.querySelectorAll('.nav-link')[idx].classList.add('active');
+  const idx=PAGES.indexOf(id);
+  const navLinks=document.querySelectorAll('.nav-link');
+  if(navLinks[idx]) navLinks[idx].classList.add('active');
+  // mobile bottom tab (only first 5 tabs shown)
+  const mobTab=document.querySelector(`.mob-tab[data-page="${id}"]`);
+  if(mobTab) mobTab.classList.add('active');
   document.getElementById('progress').style.width=((idx/4)*100)+'%';
   window.scrollTo(0,0);
+  closeNav();
   if(id==='learn' && !learnInit) initLearn();
   if(id==='flashcards' && !fcInit) initFlashcards();
   if(id==='walkthroughs' && !wtInit) initWalkthroughs();
   if(id==='glossary' && !glossaryInit) initGlossary();
   if(id==='troubleshooting' && !tsInit) initTroubleshooting();
+}
+
+// ─── MOBILE NAV ──────────────────────────────────────────────────────────────
+function toggleNav(){
+  document.getElementById('mob-drawer').classList.toggle('open');
+  document.getElementById('mob-overlay').classList.toggle('open');
+}
+function closeNav(){
+  document.getElementById('mob-drawer').classList.remove('open');
+  document.getElementById('mob-overlay').classList.remove('open');
 }
 
 
@@ -355,7 +384,7 @@ function renderTroubleshooting(sections) {
 function renderTsRow(r) {
   return `
     <div class="ts-cmd-row">
-      <button class="ts-copy-btn" onclick="copyTsCmd(this,'${r.cmd.replace(/'/g,"\\'")}')">Copy</button>
+      <button class="ts-copy-btn" onclick="copyTsCmd(this)" data-cmd="${escAttr(r.cmd)}">Copy</button>
       <code class="ts-cmd-code">${escHtml(r.cmd)}</code>
       <span class="ts-cmd-desc">${escHtml(r.desc)}</span>
     </div>`;
@@ -363,6 +392,10 @@ function renderTsRow(r) {
 
 function escHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+// Encode a string safe for use inside an HTML attribute value (double-quoted)
+function escAttr(str) {
+  return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 function toggleTsSection(id) {
@@ -384,7 +417,8 @@ function expandTsSection(id) {
   if (chevron) chevron.classList.add('open');
 }
 
-function copyTsCmd(btn, cmd) {
+function copyTsCmd(btn) {
+  const cmd = btn.dataset.cmd;
   navigator.clipboard.writeText(cmd).then(() => {
     const orig = btn.textContent;
     btn.textContent = 'Copied!';
