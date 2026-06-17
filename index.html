@@ -24,6 +24,7 @@
     <button class="nav-link" onclick="showPage('flashcards')">🃏 Flashcards</button>
     <button class="nav-link" onclick="showPage('walkthroughs')">🚀 Walkthroughs</button>
     <button class="nav-link" onclick="showPage('glossary')">📖 Glossary</button>
+    <button class="nav-link" onclick="showPage('troubleshooting')">🔧 Troubleshooting</button>
   </div>
   <button class="theme-toggle" onclick="toggleTheme()">☀️ Light</button>
 </nav>
@@ -162,11 +163,25 @@
   </div>
 </div>
 
+<!-- TROUBLESHOOTING -->
+<div id="page-troubleshooting" class="page">
+  <div class="page-header">
+    <h2>🔧 Troubleshooting Reference</h2>
+    <p>OpenShift &amp; Kubernetes command reference — from basic triage to expert-level debugging. Click any section to expand.</p>
+  </div>
+  <div class="ts-search-bar search-bar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="ts-search" placeholder="Search commands, descriptions..." oninput="filterTroubleshooting(this.value)">
+  </div>
+  <div class="ts-section-grid" id="ts-section-grid"></div>
+</div>
+
 <!-- Data -->
 <script src="js/data/topics.js"></script>
 <script src="js/data/flashcards.js"></script>
 <script src="js/data/walkthroughs.js"></script>
 <script src="js/data/glossary.js"></script>
+<script src="js/data/troubleshooting.js"></script>
 <!-- App logic -->
 <script src="js/app.js"></script>
 </body>

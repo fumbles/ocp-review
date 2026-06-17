@@ -11,14 +11,15 @@ function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  const idx=['home','learn','flashcards','walkthroughs','glossary'].indexOf(id);
+  const idx=['home','learn','flashcards','walkthroughs','glossary','troubleshooting'].indexOf(id);
   document.querySelectorAll('.nav-link')[idx].classList.add('active');
-  document.getElementById('progress').style.width=((idx/3)*100)+'%';
+  document.getElementById('progress').style.width=((idx/4)*100)+'%';
   window.scrollTo(0,0);
   if(id==='learn' && !learnInit) initLearn();
   if(id==='flashcards' && !fcInit) initFlashcards();
   if(id==='walkthroughs' && !wtInit) initWalkthroughs();
   if(id==='glossary' && !glossaryInit) initGlossary();
+  if(id==='troubleshooting' && !tsInit) initTroubleshooting();
 }
 
 
@@ -281,7 +282,118 @@ function collapseAll(){
   document.querySelectorAll('.gl-entry.open').forEach(e=>e.classList.remove('open'));
 }
 
-// Keyboard nav for flashcards
+// ─── TROUBLESHOOTING LOGIC ────────────────────────────────────────────────────
+let tsInit = false, tsSearchVal = '';
+
+function initTroubleshooting() {
+  tsInit = true;
+  renderTroubleshooting(troubleshootingSections);
+}
+
+function filterTroubleshooting(val) {
+  tsSearchVal = val.toLowerCase().trim();
+  if (!tsSearchVal) {
+    renderTroubleshooting(troubleshootingSections);
+    return;
+  }
+  const filtered = troubleshootingSections.map(sec => {
+    const basicMatches = sec.basic.filter(r =>
+      r.cmd.toLowerCase().includes(tsSearchVal) || r.desc.toLowerCase().includes(tsSearchVal)
+    );
+    const expertMatches = sec.expert.filter(r =>
+      r.cmd.toLowerCase().includes(tsSearchVal) || r.desc.toLowerCase().includes(tsSearchVal)
+    );
+    if (!basicMatches.length && !expertMatches.length &&
+        !sec.label.toLowerCase().includes(tsSearchVal) &&
+        !sec.desc.toLowerCase().includes(tsSearchVal)) return null;
+    return { ...sec, basic: basicMatches, expert: expertMatches };
+  }).filter(Boolean);
+  renderTroubleshooting(filtered);
+}
+
+function renderTroubleshooting(sections) {
+  const grid = document.getElementById('ts-section-grid');
+  if (!sections.length) {
+    grid.innerHTML = '<p style="color:var(--text3);padding:2rem;text-align:center">No commands match your search.</p>';
+    return;
+  }
+  grid.innerHTML = sections.map(sec => `
+    <div class="ts-section" id="ts-sec-${sec.id}">
+      <div class="ts-section-header" onclick="toggleTsSection('${sec.id}')">
+        <span class="ts-section-icon">${sec.icon}</span>
+        <div class="ts-section-title">
+          <span class="ts-section-name">${sec.label}</span>
+          <span class="ts-section-desc">${sec.desc}</span>
+        </div>
+        <span class="ts-section-counts">
+          <span class="ts-badge ts-badge-basic">${sec.basic.length} basic</span>
+          <span class="ts-badge ts-badge-expert">${sec.expert.length} expert</span>
+        </span>
+        <span class="ts-chevron" id="ts-chevron-${sec.id}">▶</span>
+      </div>
+      <div class="ts-section-body" id="ts-body-${sec.id}">
+        <div class="ts-subsection">
+          <div class="ts-subsection-label ts-label-basic">🟢 Basic Triage</div>
+          ${sec.basic.length
+            ? `<div class="ts-cmd-list">${sec.basic.map(r => renderTsRow(r)).join('')}</div>`
+            : '<p class="ts-empty">No basic commands match your search.</p>'}
+        </div>
+        <div class="ts-subsection">
+          <div class="ts-subsection-label ts-label-expert">⚡ Expert Debugging</div>
+          ${sec.expert.length
+            ? `<div class="ts-cmd-list">${sec.expert.map(r => renderTsRow(r)).join('')}</div>`
+            : '<p class="ts-empty">No expert commands match your search.</p>'}
+        </div>
+      </div>
+    </div>`).join('');
+  // Auto-expand all sections when searching
+  if (tsSearchVal) {
+    sections.forEach(sec => expandTsSection(sec.id));
+  }
+}
+
+function renderTsRow(r) {
+  return `
+    <div class="ts-cmd-row">
+      <button class="ts-copy-btn" onclick="copyTsCmd(this,'${r.cmd.replace(/'/g,"\\'")}')">Copy</button>
+      <code class="ts-cmd-code">${escHtml(r.cmd)}</code>
+      <span class="ts-cmd-desc">${escHtml(r.desc)}</span>
+    </div>`;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function toggleTsSection(id) {
+  const body = document.getElementById('ts-body-' + id);
+  const chevron = document.getElementById('ts-chevron-' + id);
+  const isOpen = body.classList.contains('open');
+  if (isOpen) {
+    body.classList.remove('open');
+    chevron.classList.remove('open');
+  } else {
+    expandTsSection(id);
+  }
+}
+
+function expandTsSection(id) {
+  const body = document.getElementById('ts-body-' + id);
+  const chevron = document.getElementById('ts-chevron-' + id);
+  if (body) body.classList.add('open');
+  if (chevron) chevron.classList.add('open');
+}
+
+function copyTsCmd(btn, cmd) {
+  navigator.clipboard.writeText(cmd).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+// ─── KEYBOARD NAV ────────────────────────────────────────────────────────────
 document.addEventListener('keydown',e=>{
   if(document.getElementById('page-flashcards').classList.contains('active')){
     if(e.key==='ArrowRight'||e.key==='Enter'){
