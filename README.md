@@ -6,8 +6,8 @@ A self-contained education site for support agents and Level 3 engineers prepari
 
 - **Resource Library** — 12 topic areas covering K8s architecture, workloads, networking, storage, RBAC, troubleshooting, advanced CLI, debug workflows, and pro tips
 - **Flashcards** — 66 multiple-choice cards with explanations and doc links; filterable by K8s Core, OpenShift, Networking, Storage, HA, CLI, and Advanced
-- **Walkthroughs** — 17 step-by-step guides from basic deployments to Operators, SCC, monitoring, and multi-stage builds
-- **Glossary** — 140+ terms with category filters, live search, and an A–Z jump sidebar
+- **Walkthroughs** — 18 step-by-step guides from basic deployments to Operators, SCC, monitoring, and multi-stage builds
+- **Glossary** — 200+ terms with category filters, live search, and an A–Z jump sidebar
 - Dark / light mode toggle
 
 ## Stack
@@ -25,10 +25,12 @@ A self-contained education site for support agents and Level 3 engineers prepari
 ├── js/
 │   ├── app.js              # All page logic
 │   └── data/
-│       ├── topics.js       # Learn page content
-│       ├── flashcards.js   # Flashcard definitions
-│       ├── walkthroughs.js # Walkthrough steps
-│       └── glossary.js     # Glossary terms
+│       ├── topics.js           # Learn page content (12 topic areas)
+│       ├── flashcards.js       # Flashcard definitions (66 cards)
+│       ├── walkthroughs.js     # Walkthrough steps (18 guides)
+│       ├── glossary.js         # Glossary terms (200+ entries)
+│       └── troubleshooting.js  # Troubleshooting reference (12 sections)
+├── resources/              # Supplementary study material (not served)
 ├── nginx.conf              # SPA routing + gzip + security headers
 ├── Dockerfile
 ├── build.sh                # Multi-platform buildx build + push
