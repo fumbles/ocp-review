@@ -10,6 +10,7 @@ import {
   SideNavItems,
   SideNavMenuItem,
   Content,
+  Theme,
 } from '@carbon/react'
 import { Asleep, Light } from '@carbon/icons-react'
 import { useState } from 'react'
@@ -120,9 +121,11 @@ export default function Shell({ theme, onToggleTheme }) {
         </SideNav>
       </Header>
 
-      <Content id="main-content">
-        {PAGE_COMPONENTS(navigate)[activePage]}
-      </Content>
+      <Theme theme={theme}>
+        <Content id="main-content">
+          {PAGE_COMPONENTS(navigate)[activePage]}
+        </Content>
+      </Theme>
     </>
   )
 }

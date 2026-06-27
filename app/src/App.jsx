@@ -3,12 +3,15 @@ import { Theme } from '@carbon/react'
 import Shell from './components/Shell'
 
 function App() {
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem('ocp-theme') || 'white'
-  )
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('ocp-theme') || 'white'
+    document.documentElement.setAttribute('data-carbon-theme', saved)
+    return saved
+  })
 
   useEffect(() => {
     localStorage.setItem('ocp-theme', theme)
+    document.documentElement.setAttribute('data-carbon-theme', theme)
   }, [theme])
 
   const toggleTheme = () =>
