@@ -3,7 +3,7 @@
 // term, abbr (optional), category, definition, doc (optional)
 // categories: core, ocp, operators, networking, storage, security, monitoring, builds, advanced, odf, backup, virt, multicluster, acronym
 // ═══════════════════════════════════════════════════════════════════════════════
-const glossaryTerms = [
+export const glossaryTerms = [
 // ── Kubernetes Core ───────────────────────────────────────────────────────────
 {term:"Pod",cat:"core",def:"The smallest deployable unit in Kubernetes. One or more containers that share a network namespace (same IP), storage volumes, and lifecycle. Containers inside a pod communicate over localhost. Pods are ephemeral — they are replaced, not updated in place.",doc:"https://kubernetes.io/docs/concepts/workloads/pods/"},
 {term:"Container",cat:"core",def:"A lightweight, standalone executable package that includes code, runtime, system tools, libraries, and settings. Containers share the host OS kernel but are isolated via Linux namespaces and cgroups. In Kubernetes, CRI-O or containerd manages container lifecycle on each node.",doc:"https://kubernetes.io/docs/concepts/containers/"},

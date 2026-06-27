@@ -1,0 +1,82 @@
+---
+# ── Deployment ────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ocp-mastery-carbon
+  labels:
+    app: ocp-mastery-carbon
+    env: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ocp-mastery-carbon
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: ocp-mastery-carbon
+        env: test
+    spec:
+      containers:
+      - name: ocp-mastery-carbon
+        image: fumbles/ocp-review:carbon
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+---
+# ── Service ───────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: ocp-mastery-carbon
+  labels:
+    app: ocp-mastery-carbon
+spec:
+  selector:
+    app: ocp-mastery-carbon
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+# ── Internal cluster Route (auto-assigned hostname) ───────────────────────────
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: ocp-mastery-carbon
+  labels:
+    app: ocp-mastery-carbon
+    env: test
+spec:
+  to:
+    kind: Service
+    name: ocp-mastery-carbon
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

@@ -1,0 +1,214 @@
+// ── Flashcards page ───────────────────────────────────────────────────────────
+
+.ocp-fc {
+  padding-block-end: 3rem;
+
+  &__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin-block-end: 1.5rem;
+  }
+
+  &__filter-btn {
+    padding: 0.35rem 0.8rem;
+    border-radius: 1rem;
+    border: 1px solid var(--cds-border-subtle-01);
+    background: var(--cds-layer-01);
+    color: var(--cds-text-secondary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.1s, color 0.1s, border-color 0.1s;
+
+    &:hover { background: var(--cds-background-hover); color: var(--cds-text-primary); }
+    &--active {
+      border-color: #ee0000;
+      background: rgba(238, 0, 0, 0.08);
+      color: #ee0000;
+      font-weight: 600;
+    }
+  }
+
+  &__shuffle-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: auto;
+    padding: 0.35rem 0.8rem;
+    border-radius: 1rem;
+    border: 1px solid var(--cds-border-subtle-01);
+    background: none;
+    color: var(--cds-text-secondary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: color 0.1s;
+
+    &:hover { color: #ee0000; border-color: #ee0000; }
+  }
+
+  &__meta {
+    margin-block-end: 1rem;
+  }
+
+  &__progress {
+    margin-block-end: 0.5rem;
+  }
+
+  &__scoreline {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--cds-text-secondary);
+  }
+
+  // Question card
+  &__question {
+    background: var(--cds-layer-01);
+    border: 1px solid var(--cds-border-subtle-01);
+    border-radius: 4px;
+    padding: 1.5rem;
+    margin-block-end: 1rem;
+  }
+
+  &__q-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--cds-text-helper);
+    margin-block-end: 0.75rem;
+  }
+
+  &__q-text {
+    font-size: 1.15rem;
+    font-weight: 600;
+    line-height: 1.55;
+    color: var(--cds-text-primary);
+    margin-block-end: 0.75rem;
+
+    code {
+      background: var(--cds-layer-02);
+      border: 1px solid var(--cds-border-subtle-01);
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.9em;
+    }
+  }
+
+  &__tag { margin-block-start: 0.25rem; }
+
+  // Options
+  &__options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-block-end: 1rem;
+  }
+
+  &__opt {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    padding: 0.9rem 1.1rem;
+    background: var(--cds-layer-01);
+    border: 2px solid var(--cds-border-subtle-01);
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.1s, background 0.1s;
+    width: 100%;
+
+    &:hover:not(:disabled) {
+      border-color: #ee0000;
+      background: rgba(238, 0, 0, 0.05);
+    }
+
+    &--disabled { cursor: default; }
+
+    &--correct {
+      border-color: #24a148;
+      background: rgba(36, 161, 72, 0.08);
+    }
+
+    &--wrong {
+      border-color: #da1e28;
+      background: rgba(218, 30, 40, 0.06);
+    }
+  }
+
+  &__opt-letter {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    background: var(--cds-layer-02);
+    border: 1px solid var(--cds-border-subtle-01);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    color: var(--cds-text-secondary);
+
+    .ocp-fc__opt--correct & { background: #24a148; border-color: #24a148; color: #fff; }
+    .ocp-fc__opt--wrong & { background: #da1e28; border-color: #da1e28; color: #fff; }
+  }
+
+  &__opt-text {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--cds-text-primary);
+    padding-top: 2px;
+  }
+
+  &__opt-icon {
+    margin-left: auto;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    align-self: center;
+  }
+
+  // Result panel
+  &__result {
+    background: var(--cds-layer-01);
+    border: 1px solid var(--cds-border-subtle-01);
+    border-radius: 4px;
+    padding: 1.25rem 1.5rem;
+  }
+
+  &__verdict {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-block-end: 0.75rem;
+
+    &--correct { color: #24a148; }
+    &--wrong { color: #da1e28; }
+  }
+
+  &__explanation {
+    color: var(--cds-text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.65;
+    margin-block-end: 0.75rem;
+  }
+
+  &__doc-link {
+    display: inline-block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #ee0000;
+    text-decoration: none;
+    margin-block-end: 1rem;
+
+    &:hover { text-decoration: underline; }
+  }
+
+  &__next-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-block: 1rem 0;
+  }
+}

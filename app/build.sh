@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ─── Config ──────────────────────────────────────────────────────────────────
 IMAGE="fumbles/ocp-review"
-DEFAULT_TAG="latest"
+DEFAULT_TAG="carbon"
 
 # ─── Args ────────────────────────────────────────────────────────────────────
 TAG="${1:-$DEFAULT_TAG}"
@@ -28,13 +28,13 @@ if ! docker info &>/dev/null; then
   exit 1
 fi
 
-if [ ! -f "app/package.json" ]; then
-  red "app/package.json not found. Run this script from the repo root."
+if [ ! -f "package.json" ]; then
+  red "package.json not found. Run this script from the app/ directory."
   exit 1
 fi
 
 green "✓ Docker is running"
-green "✓ app/package.json found"
+green "✓ package.json found"
 
 # ─── Summary ─────────────────────────────────────────────────────────────────
 echo ""
@@ -66,11 +66,11 @@ fi
 echo ""
 green "✓ Done!"
 echo ""
-echo "  Pull with : docker pull ${IMAGE}:${TAG}"
-echo "  Run with  : docker run -p 8080:8080 ${IMAGE}:${TAG}"
-echo "  Open      : http://localhost:8080"
+echo "  Pull with   : docker pull ${IMAGE}:${TAG}"
+echo "  Run with    : docker run -p 8080:8080 ${IMAGE}:${TAG}"
+echo "  Open        : http://localhost:8080"
 echo ""
-echo "  Deploy    : oc apply -f deployment.yaml"
-echo "  Rollout   : oc rollout restart deployment/ocp-review"
+echo "  Deploy test : oc apply -f deployment.yaml"
+echo "  Public route: oc apply -f external-route.yaml"
 echo ""
-echo "  Docker Hub: https://hub.docker.com/r/fumbles/ocp-review"
+echo "  Docker Hub  : https://hub.docker.com/r/fumbles/ocp-review"

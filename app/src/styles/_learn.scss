@@ -1,0 +1,204 @@
+// ── Learn page ────────────────────────────────────────────────────────────────
+
+.ocp-learn {
+  padding-block-end: 3rem;
+
+  &__grid {
+    margin-block-start: 0;
+  }
+
+  &__sidebar-col {
+    // Sticky on desktop so the topic list scrolls independently
+    @media (min-width: 66rem) {
+      position: sticky;
+      top: 3rem; // below Carbon header (48px)
+      align-self: start;
+      max-height: calc(100vh - 5rem);
+      overflow-y: auto;
+    }
+  }
+
+  &__sidebar {
+    padding-block-start: 1rem;
+  }
+
+  &__topic-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0.625rem 1rem;
+    background: none;
+    border: none;
+    border-left: 3px solid transparent;
+    text-align: left;
+    font-size: 0.875rem;
+    color: var(--cds-text-secondary);
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s, border-color 0.1s;
+
+    &:hover {
+      background: var(--cds-background-hover);
+      color: var(--cds-text-primary);
+    }
+
+    &--active {
+      border-left-color: #ee0000;
+      background: var(--cds-background-selected);
+      color: var(--cds-text-primary);
+      font-weight: 600;
+    }
+  }
+
+  &__no-results {
+    padding: 1rem;
+    color: var(--cds-text-helper);
+    font-size: 0.875rem;
+  }
+
+  &__content {
+    padding: 1.5rem 0;
+  }
+}
+
+// ── Topic body — map old custom classes to Carbon tokens ─────────────────────
+// The HTML is authored in data/topics.js and uses these class names directly.
+
+.ocp-topic-body {
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-block-end: 0.5rem;
+    color: var(--cds-text-primary);
+  }
+
+  .topic-desc {
+    color: var(--cds-text-secondary);
+    margin-block-end: 1.5rem;
+    line-height: 1.6;
+  }
+
+  .section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--cds-text-helper);
+    margin-block: 1.5rem 0.75rem;
+  }
+
+  .definition-card {
+    background: var(--cds-layer-01);
+    border-left: 3px solid #ee0000;
+    border-radius: 0 4px 4px 0;
+    padding: 1rem 1.25rem;
+    margin-block-end: 0.75rem;
+
+    h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-block-end: 0.35rem;
+      color: var(--cds-text-primary);
+    }
+
+    p {
+      color: var(--cds-text-secondary);
+      font-size: 0.875rem;
+      line-height: 1.6;
+      margin: 0;
+    }
+  }
+
+  code {
+    background: var(--cds-layer-02);
+    border: 1px solid var(--cds-border-subtle-01);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--cds-link-primary);
+  }
+
+  pre {
+    background: var(--cds-layer-02);
+    border: 1px solid var(--cds-border-subtle-01);
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin-block: 0.75rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.84rem;
+    line-height: 1.7;
+    color: var(--cds-text-primary);
+
+    // Syntax highlight spans from the original data
+    .c { color: var(--cds-text-helper); font-style: italic; }
+    .k { color: #f97316; font-weight: 600; }
+    .s { color: #16a34a; }
+    .p { color: var(--cds-link-primary); }
+    .kw { color: #ee0000; }
+  }
+
+  .tip {
+    background: var(--cds-layer-01);
+    border: 1px solid var(--cds-border-interactive);
+    border-left: 3px solid var(--cds-link-primary);
+    border-radius: 0 4px 4px 0;
+    padding: 0.9rem 1.1rem;
+    margin-block: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--cds-text-secondary);
+
+    strong { color: var(--cds-link-primary); }
+  }
+
+  .warn {
+    background: var(--cds-layer-01);
+    border: 1px solid var(--cds-support-warning);
+    border-left: 3px solid var(--cds-support-warning);
+    border-radius: 0 4px 4px 0;
+    padding: 0.9rem 1.1rem;
+    margin-block: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--cds-text-secondary);
+
+    strong { color: var(--cds-support-warning); }
+  }
+
+  .cmd-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-block: 0.75rem;
+    font-size: 0.875rem;
+
+    th {
+      background: var(--cds-layer-02);
+      padding: 0.6rem 0.9rem;
+      text-align: left;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--cds-text-helper);
+      border-bottom: 1px solid var(--cds-border-subtle-01);
+    }
+
+    td {
+      padding: 0.6rem 0.9rem;
+      border-bottom: 1px solid var(--cds-border-subtle-01);
+      vertical-align: top;
+      color: var(--cds-text-secondary);
+
+      &:first-child {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.82rem;
+        color: var(--cds-link-primary);
+        white-space: nowrap;
+      }
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    tr:hover td { background: var(--cds-background-hover); }
+  }
+}

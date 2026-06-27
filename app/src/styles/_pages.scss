@@ -1,0 +1,118 @@
+// ── Home page ─────────────────────────────────────────────────────────────────
+.ocp-home {
+  padding-block-end: 3rem;
+}
+
+.ocp-hero {
+  padding-block: 3rem 2rem;
+
+  &__inner {
+    text-align: center;
+    max-width: 44rem;
+    margin-inline: auto;
+  }
+
+  &__tags {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-block-end: 1rem;
+  }
+
+  &__heading {
+    font-size: clamp(1.75rem, 5vw, 2.75rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-block-end: 1rem;
+  }
+
+  &__sub {
+    color: var(--cds-text-secondary);
+    font-size: 1rem;
+    line-height: 1.6;
+    max-width: 38rem;
+    margin-inline: auto;
+  }
+}
+
+.ocp-brand-red {
+  color: #ee0000;
+}
+
+// ── Feature cards ─────────────────────────────────────────────────────────────
+.ocp-feature-grid {
+  padding-block-end: 2rem;
+}
+
+.ocp-feature-tile {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem;
+
+  &__icon {
+    color: #ee0000;
+  }
+
+  &__title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  &__body {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--cds-text-secondary);
+    margin: 0;
+  }
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+.ocp-stats {
+  padding-block: 1.5rem;
+  border-block-start: 1px solid var(--cds-border-subtle);
+}
+
+.ocp-stat {
+  text-align: center;
+  padding-block: 1rem;
+
+  &__num {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #ee0000;
+    line-height: 1;
+  }
+
+  &__label {
+    font-size: 0.8rem;
+    color: var(--cds-text-secondary);
+    margin-block-start: 0.25rem;
+  }
+}
+
+// ── Generic page headers ──────────────────────────────────────────────────────
+.ocp-page-heading {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-block-start: 1.5rem;
+  margin-block-end: 0.5rem;
+}
+
+.ocp-page-sub {
+  color: var(--cds-text-secondary);
+  margin-block-end: 1.5rem;
+}
+
+// ── Placeholder tiles (stub pages) ───────────────────────────────────────────
+.ocp-placeholder-tile {
+  min-height: 8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cds-text-secondary);
+  font-style: italic;
+}
