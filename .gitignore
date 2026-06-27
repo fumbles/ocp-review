@@ -1,1 +1,5 @@
 .env
+
+# Carbon/React app build artefacts
+app/node_modules/
+app/dist/

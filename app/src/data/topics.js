@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // LEARN DATA
 // ═══════════════════════════════════════════════════════════════════════════════
-const topics = [
+export const topics = [
 {id:'k8s-arch', label:'K8s Architecture', content: `
 <h3>Kubernetes Architecture</h3>
 <p class="topic-desc">Kubernetes (K8s) is an open-source container orchestration platform. OpenShift is Red Hat's enterprise distribution built on top of Kubernetes, adding developer and operational features.</p>

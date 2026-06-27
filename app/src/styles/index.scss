@@ -1,0 +1,49 @@
+// Suppress Carbon's bundled @font-face rules — they use ~@ibm/plex tilde URLs
+// (a webpack resolver alias) that Vite can't resolve, causing 404s in production.
+// IBM Plex is loaded via Google Fonts CDN in index.html instead.
+@use '@carbon/styles/scss/config' with (
+  $css--font-face: false
+);
+
+// Full Carbon component styles (tokens, reset, all components)
+@use '@carbon/react';
+
+// ── Page-specific styles ──────────────────────────────────────────────────────
+@use './pages';
+@use './learn';
+@use './flashcards';
+@use './walkthroughs';
+@use './glossary-ts';
+
+// ── Brand overrides ───────────────────────────────────────────────────────────
+// Map Carbon's interactive token to Red Hat red so buttons/links stay on-brand.
+:root {
+  --cds-interactive: #ee0000;
+  --cds-link-primary: #ee0000;
+  --cds-link-primary-hover: #be0000;
+  --cds-focus: #ee0000;
+}
+
+// ── Global resets ─────────────────────────────────────────────────────────────
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+// ── Utility ───────────────────────────────────────────────────────────────────
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
