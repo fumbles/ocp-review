@@ -10,6 +10,7 @@ import {
   Rocket,
   Catalog,
   Debug,
+  Certificate,
 } from '@carbon/icons-react'
 
 const FEATURE_CARDS = [
@@ -62,7 +63,7 @@ export default function HomePage({ onNavigate }) {
           <div className="ocp-hero__inner">
             <div className="ocp-hero__tags">
               <Tag type="red" size="sm">DO180</Tag>
-              <Tag type="red" size="sm">OpenShift 4.18</Tag>
+              <Tag type="red" size="sm">OpenShift 4.21</Tag>
               <Tag type="cool-gray" size="sm">Kubernetes</Tag>
             </div>
             <h1 className="ocp-hero__heading">
@@ -91,6 +92,34 @@ export default function HomePage({ onNavigate }) {
             </ClickableTile>
           </Column>
         ))}
+      </Grid>
+
+      {/* ── External links ── */}
+      <Grid className="ocp-external-links">
+        <Column lg={8} md={4} sm={4}>
+          <ClickableTile
+            className="ocp-external-tile"
+            href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <div className="ocp-feature-tile__icon"><Book size={24} /></div>
+            <h4 className="ocp-feature-tile__title">Official OCP 4.21 Docs</h4>
+            <p className="ocp-feature-tile__body">Red Hat OpenShift Container Platform 4.21 documentation on docs.redhat.com.</p>
+          </ClickableTile>
+        </Column>
+        <Column lg={8} md={4} sm={4}>
+          <ClickableTile
+            className="ocp-external-tile"
+            href="https://rh-cert-map.wasmer.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <div className="ocp-feature-tile__icon"><Certificate size={24} /></div>
+            <h4 className="ocp-feature-tile__title">Red Hat Certification Path Map</h4>
+            <p className="ocp-feature-tile__body">Interactive map of all Red Hat certification paths — visualise the full journey from RHCSA to architect-level certs.</p>
+          </ClickableTile>
+        </Column>
       </Grid>
 
       {/* ── Stats ── */}

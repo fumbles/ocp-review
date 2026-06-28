@@ -1,0 +1,179 @@
+// ── Practice Exams page ───────────────────────────────────────────────────────
+
+.ocp-pe {
+
+  &__card {
+    .ocp-pe__card-tags {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      margin-block-end: 0.25rem;
+    }
+  }
+
+  &__detail {
+    padding-block: 1rem 3rem;
+  }
+
+  &__detail-meta {
+    display: flex;
+    gap: 0.5rem;
+    margin-block-end: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  &__task-count {
+    font-size: 0.82rem;
+    color: var(--cds-text-helper);
+    margin-block-end: 1.75rem;
+  }
+
+  // Numbered task list
+  &__task-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  &__task-item {
+    display: flex;
+    gap: 1.25rem;
+    padding-block-end: 2rem;
+    position: relative;
+
+    // Connector line between items
+    &::before {
+      content: '';
+      position: absolute;
+      left: 17px;
+      top: 36px;
+      bottom: 0;
+      width: 2px;
+      background: var(--cds-border-subtle-01);
+    }
+    &:last-child::before { display: none; }
+  }
+
+  &__task-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--cds-interactive, #ee0000);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    z-index: 1;
+  }
+
+  &__task-body {
+    flex: 1;
+    padding-top: 0.35rem;
+  }
+
+  &__task-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.6rem;
+    color: var(--cds-text-primary);
+  }
+
+  // Individual task card
+  &__task {
+    border: 1px solid var(--cds-border-subtle-01);
+    border-radius: 4px;
+    padding: 1rem;
+    background: var(--cds-layer-01);
+    transition: border-color 0.15s;
+
+    &--done {
+      border-color: #24a148;
+      background: color-mix(in srgb, #24a148 6%, var(--cds-layer-01));
+
+      .ocp-pe__task-check {
+        background: #24a148;
+        color: #fff;
+        border-color: #24a148;
+      }
+    }
+  }
+
+  &__task-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-block-end: 0.75rem;
+  }
+
+  &__task-check {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--cds-border-strong-01);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: transparent;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    margin-top: 0.1rem;
+
+    &:hover {
+      border-color: #24a148;
+      color: #24a148;
+    }
+  }
+
+  &__task-objective {
+    font-size: 0.875rem;
+    color: var(--cds-text-secondary);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  &__task-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  // Reveal panels (hint / solution)
+  &__reveal {
+    margin-block-start: 0.75rem;
+    border-radius: 4px;
+    padding: 0.9rem 1.1rem;
+    font-size: 0.82rem;
+    line-height: 1.7;
+
+    p {
+      margin: 0;
+      color: var(--cds-text-secondary);
+    }
+
+    pre {
+      margin: 0;
+      font-family: 'IBM Plex Mono', monospace;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: #ee0000;
+      background: transparent;
+    }
+
+    &--hint {
+      background: var(--cds-layer-02);
+      border: 1px solid var(--cds-border-subtle-01);
+      border-left: 3px solid #f1c21b;
+    }
+
+    &--help {
+      background: var(--cds-layer-02);
+      border: 1px solid var(--cds-border-subtle-01);
+      border-left: 3px solid #ee0000;
+    }
+  }
+}

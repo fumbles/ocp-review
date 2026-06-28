@@ -974,15 +974,53 @@ oc cp &lt;debug-pod-name&gt;:/var/tmp/sosreport-*.tar.xz ./</pre>
   <a href="https://access.redhat.com/solutions/7141255" target="_blank" rel="noopener">Red Hat Technical Supportability Review with AI: Proactive AI-Driven Cluster Assessments ↗</a><br>
   <strong>📤 Upload portal:</strong> <a href="https://access.redhat.com/support/cases/#/analyze" target="_blank" rel="noopener">Red Hat Support — AI Analysis Upload ↗</a>
 </div>
-<pre><span class="c"># Collect a must-gather with the AI review image</span>
-oc adm must-gather \
+<pre><span class="c"># Step 1: capture all CSVs</span>
+oc get csv -A -o json &gt; csvs.json
+
+<span class="c"># Step 2: build command — pg-must-gather (AI review) is the base image</span>
+must_gather_cmd="oc adm must-gather \
   --volume-percentage=95 \
   --image-stream=openshift/must-gather \
-  --image=quay.io/pg.next/pg-must-gather
+  --image=quay.io/pg.next/pg-must-gather"
 
-<span class="c"># Upload the resulting archive at:</span>
-<span class="c"># https://access.redhat.com/support/cases/#/analyze</span></pre>
-<div class="tip"><strong>💡 Combine with dynamic must-gather:</strong> The dynamic script above already includes <code>quay.io/pg.next/pg-must-gather</code> as a base image, so running the full dynamic script automatically includes the AI review collection alongside all Operator-specific gatherers.</div>
+<span class="c"># Add must-gather images from all Succeeded CSVs</span>
+while IFS= read -r image; do
+  must_gather_cmd="$must_gather_cmd $image"
+done &lt; &lt;(
+  jq -r '
+    .items[]
+    | select(.status.phase == "Succeeded")
+    | select(.spec.relatedImages != null)
+    | .spec.relatedImages
+    | map(select(.image | test("must-?gather"; "i")))
+    | group_by(.image | split("@")[0] | split("/")[0:3] | join("/"))
+    | map(last)
+    | .[]
+    | "--image=" + .image
+  ' csvs.json | sort -u
+)
+
+<span class="c"># Also add cluster-logging operator image if present</span>
+while IFS= read -r image; do
+  must_gather_cmd="$must_gather_cmd $image"
+done &lt; &lt;(
+  jq -r '
+    .items[]
+    | select(.status.phase == "Succeeded")
+    | select(.metadata.name | contains("cluster-logging"))
+    | select(.spec.install.spec.deployments[]?.name == "cluster-logging-operator")
+    | .spec.install.spec.deployments[].spec.template.spec.containers[].image
+    | "--image=" + .
+  ' csvs.json | sort -u
+)
+
+<span class="c"># Preview the generated command, then run it</span>
+echo "Generated command:"
+printf '%s\n' "$must_gather_cmd" | tee must-gather-console.log
+
+eval "$must_gather_cmd" 2&gt;&amp;1 | tee -a must-gather-console.log</pre>
+<div class="warn"><strong>⚠️ Note:</strong> <code>eval</code> executes the assembled command — review the generated output before running in production environments.</div>
+<div class="tip"><strong>📤 Upload the resulting archive at:</strong> <a href="https://access.redhat.com/support/cases/#/analyze" target="_blank" rel="noopener">Red Hat Support — AI Analysis Upload ↗</a></div>
 `},
 ];
 

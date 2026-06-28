@@ -36,6 +36,13 @@ fi
 green "✓ Docker is running"
 green "✓ app/package.json found"
 
+# ─── Local Vite build ────────────────────────────────────────────────────────
+# Build dist/ on the host so the Dockerfile never needs to run Node under QEMU.
+# (QEMU + node:alpine segfaults on amd64 cross-builds from ARM hosts.)
+step "Building Vite app locally (avoids QEMU segfault on cross-platform builds)"
+(cd app && npm ci --prefer-offline && npm run build)
+green "✓ app/dist is ready"
+
 # ─── Summary ─────────────────────────────────────────────────────────────────
 echo ""
 bold "Build summary"

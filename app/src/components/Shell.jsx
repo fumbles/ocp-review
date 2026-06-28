@@ -20,6 +20,7 @@ import FlashcardsPage from './pages/FlashcardsPage'
 import WalkthroughsPage from './pages/WalkthroughsPage'
 import GlossaryPage from './pages/GlossaryPage'
 import TroubleshootingPage from './pages/TroubleshootingPage'
+import PracticeExamsPage from './pages/PracticeExamsPage'
 
 const PAGES = [
   { id: 'home',           label: 'Home' },
@@ -28,6 +29,7 @@ const PAGES = [
   { id: 'walkthroughs',   label: 'Walkthroughs' },
   { id: 'glossary',       label: 'Glossary' },
   { id: 'troubleshooting',label: 'Troubleshooting' },
+  { id: 'practice',       label: 'Practice' },
 ]
 
 const PAGE_COMPONENTS = (navigate) => ({
@@ -37,6 +39,7 @@ const PAGE_COMPONENTS = (navigate) => ({
   walkthroughs:   <WalkthroughsPage />,
   glossary:       <GlossaryPage />,
   troubleshooting:<TroubleshootingPage />,
+  practice:       <PracticeExamsPage />,
 })
 
 export default function Shell({ theme, onToggleTheme }) {
