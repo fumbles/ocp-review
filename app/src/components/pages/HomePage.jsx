@@ -11,6 +11,7 @@ import {
   Catalog,
   Debug,
   Certificate,
+  TaskComplete,
 } from '@carbon/icons-react'
 
 const FEATURE_CARDS = [
@@ -43,6 +44,12 @@ const FEATURE_CARDS = [
     icon: <Debug size={32} />,
     title: 'Troubleshooting',
     body: '12 sections of OpenShift & Kubernetes oc commands — basic triage through expert debugging.',
+  },
+  {
+    id: 'practice',
+    icon: <TaskComplete size={32} />,
+    title: 'Practice Challenges',
+    body: 'Hands-on exam scenarios with progressive hints and full solutions — aligned to DO180 & EX280.',
   },
 ]
 

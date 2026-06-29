@@ -156,6 +156,9 @@ export const practiceExams = [
     levelType: 'purple',
     source: 'Pluralsight',
     desc: 'Deploy applications via S2I, configure Routes (plain and TLS-secured), use Secrets, create ServiceAccounts, and configure manual and automatic scaling.',
+    links: [
+      { label: 'Example app — sclorg/cakephp-ex', url: 'https://github.com/sclorg/cakephp-ex' },
+    ],
     tasks: [
       {
         id: 't1',

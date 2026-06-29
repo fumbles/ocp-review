@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Grid, Column, Tag, Button } from '@carbon/react'
-import { ArrowLeft, Idea, Help, ChevronDown, ChevronUp, Checkmark } from '@carbon/icons-react'
+import { ArrowLeft, Idea, Help, ChevronDown, ChevronUp, Checkmark, Launch } from '@carbon/icons-react'
 import { practiceExams } from '../../data/practiceExams'
 
 // ── Tag colour map ────────────────────────────────────────────────────────────
@@ -78,6 +78,24 @@ function ChallengeDetail({ exam, onBack }) {
       </div>
       <h3 className="ocp-wt__detail-title">{exam.title}</h3>
       <p className="ocp-wt__detail-desc">{exam.desc}</p>
+
+      {exam.links?.length > 0 && (
+        <div className="ocp-pe__links">
+          <span className="ocp-pe__links-label">Resources:</span>
+          {exam.links.map(l => (
+            <a
+              key={l.url}
+              className="ocp-pe__link"
+              href={l.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Launch size={14} />
+              {l.label}
+            </a>
+          ))}
+        </div>
+      )}
 
       <p className="ocp-pe__task-count">{exam.tasks.length} tasks — click a task title to expand hints &amp; solutions</p>
 

@@ -22,6 +22,45 @@
     flex-wrap: wrap;
   }
 
+  &__links {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin-block-end: 1.25rem;
+    padding: 0.65rem 1rem;
+    background: var(--cds-layer-02);
+    border: 1px solid var(--cds-border-subtle-01);
+    border-left: 3px solid var(--cds-interactive, #ee0000);
+    border-radius: 4px;
+  }
+
+  &__links-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--cds-text-helper);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+
+  &__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.875rem;
+    color: var(--cds-link-primary, #ee0000);
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+      color: var(--cds-link-primary-hover, #be0000);
+    }
+
+    svg { flex-shrink: 0; }
+  }
+
   &__task-count {
     font-size: 0.82rem;
     color: var(--cds-text-helper);
