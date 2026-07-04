@@ -3,6 +3,7 @@ import {
   Column,
   ClickableTile,
   Tag,
+  Search,
 } from '@carbon/react'
 import {
   Book,
@@ -61,7 +62,7 @@ const STATS = [
   { num: 'DO180',label: 'Aligned' },
 ]
 
-export default function HomePage({ onNavigate }) {
+export default function HomePage({ onNavigate, onOpenSearch }) {
   return (
     <div className="ocp-home">
       {/* ── Hero ── */}
@@ -81,6 +82,16 @@ export default function HomePage({ onNavigate }) {
               resources, definitions, examples, flashcards, and step-by-step
               walkthroughs aligned to DO180.
             </p>
+            <button className="ocp-hero__search-btn" onClick={onOpenSearch}>
+              <Search
+                id="hero-search-trigger"
+                labelText="Search all content"
+                placeholder="Search topics, glossary, flashcards…"
+                size="lg"
+                readOnly
+                onClick={onOpenSearch}
+              />
+            </button>
           </div>
         </Column>
       </Grid>

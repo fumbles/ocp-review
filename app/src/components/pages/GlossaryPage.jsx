@@ -7,11 +7,13 @@ const GL_CATS = {
   networking: 'Networking', storage: 'Storage', security: 'Security',
   monitoring: 'Monitoring', builds: 'Builds & CI/CD', advanced: 'Advanced / Platform',
   odf: 'Data Foundation (ODF)', backup: 'Backup & Restore', virt: 'Virtualization',
-  multicluster: 'Multi-Cluster (ACM)', hcp: 'Hosted Control Planes', acronym: 'Acronyms',
+  multicluster: 'Multi-Cluster (ACM)', hcp: 'Hosted Control Planes',
+  acs: 'Advanced Cluster Security', acronym: 'Acronyms',
 }
 
-export default function GlossaryPage() {
-  const [query, setQuery] = useState('')
+export default function GlossaryPage({ targetId }) {
+  // When arriving from search, pre-fill the search box with the term name
+  const [query, setQuery] = useState(targetId ?? '')
   const [activeFilter, setActiveFilter] = useState('all')
 
   const filtered = useMemo(() => {

@@ -13,13 +13,51 @@
       position: sticky;
       top: 3rem; // below Carbon header (48px)
       align-self: start;
-      max-height: calc(100vh - 5rem);
-      overflow-y: auto;
     }
   }
 
   &__sidebar {
     padding-block-start: 1rem;
+  }
+
+  // Nav wrapper + scroll hint
+  &__nav-wrap {
+    position: relative;
+  }
+
+  &__nav-scroll {
+    max-height: 60vh;
+    overflow-y: auto;
+    // Enough bottom padding so the last item clears the fade gradient
+    padding-block-end: 2.5rem;
+
+    // Hide scrollbar visually but keep it functional
+    scrollbar-width: none;
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  // Gradient + chevron overlay — positioned over the bottom of the scroll area,
+  // not below it, so it never pushes content out of view
+  &__scroll-hint {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-block-end: 0.3rem;
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      var(--cds-background, #fff) 100%
+    );
+    font-size: 0.72rem;
+    color: var(--cds-text-helper);
+    letter-spacing: 0.04em;
+    user-select: none;
+    pointer-events: none;
   }
 
   &__topic-item {

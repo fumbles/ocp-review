@@ -1,0 +1,96 @@
+// ── Global search modal & results ────────────────────────────────────────────
+
+.ocp-search-modal {
+  // Widen the modal so results have breathing room
+  .cds--modal-container {
+    max-width: 44rem;
+  }
+
+  // Ensure the search input inside the modal is full-width
+  .cds--search {
+    width: 100%;
+    margin-block-end: 1rem;
+  }
+}
+
+.ocp-search-results {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-block-end: 0.5rem;
+}
+
+.ocp-search-hint {
+  font-size: 0.875rem;
+  color: var(--cds-text-helper);
+  padding: 1rem 0;
+  text-align: center;
+}
+
+.ocp-search-group {
+  margin-block-end: 1rem;
+
+  &__label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--cds-text-helper);
+    padding: 0.5rem 0 0.35rem;
+    border-bottom: 1px solid var(--cds-border-subtle-01);
+    margin-block-end: 0.25rem;
+  }
+}
+
+.ocp-search-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0.6rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.1s;
+
+  &:hover {
+    background: var(--cds-background-hover);
+  }
+
+  &__title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--cds-text-primary);
+  }
+
+  &__excerpt {
+    font-size: 0.8rem;
+    color: var(--cds-text-secondary);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// ── Hero search trigger ───────────────────────────────────────────────────────
+
+.ocp-hero__search-btn {
+  all: unset;       // strip button defaults
+  display: block;
+  width: 100%;
+  max-width: 30rem;
+  margin: 1.5rem auto 0;
+  cursor: pointer;
+
+  // Make the inner Carbon Search look like a clickable input but not interactive
+  .cds--search-input {
+    cursor: pointer;
+    pointer-events: none;
+  }
+
+  .cds--search-magnifier {
+    pointer-events: none;
+  }
+}

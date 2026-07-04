@@ -10,9 +10,11 @@ import {
   SideNavItems,
   SideNavMenuItem,
   Content,
+  Modal,
+  Search,
 } from '@carbon/react'
-import { Asleep, Light } from '@carbon/icons-react'
-import { useState } from 'react'
+import { Asleep, Light, Search as SearchIcon } from '@carbon/icons-react'
+import { useState, useCallback } from 'react'
 
 import HomePage from './pages/HomePage'
 import LearnPage from './pages/LearnPage'
@@ -21,6 +23,9 @@ import WalkthroughsPage from './pages/WalkthroughsPage'
 import GlossaryPage from './pages/GlossaryPage'
 import TroubleshootingPage from './pages/TroubleshootingPage'
 import PracticeExamsPage from './pages/PracticeExamsPage'
+
+import { useHashRouter } from '../hooks/useHashRouter'
+import { useSearch } from '../hooks/useSearch'
 
 const PAGES = [
   { id: 'home',           label: 'Home' },
@@ -32,27 +37,55 @@ const PAGES = [
   { id: 'practice',       label: 'Practice' },
 ]
 
-const PAGE_COMPONENTS = (navigate) => ({
-  home:           <HomePage onNavigate={navigate} />,
-  learn:          <LearnPage />,
+const PAGE_COMPONENTS = (navigate, onOpenSearch, targetId) => ({
+  home:           <HomePage onNavigate={navigate} onOpenSearch={onOpenSearch} />,
+  learn:          <LearnPage targetId={targetId} />,
   flashcards:     <FlashcardsPage />,
   walkthroughs:   <WalkthroughsPage />,
-  glossary:       <GlossaryPage />,
+  glossary:       <GlossaryPage targetId={targetId} />,
   troubleshooting:<TroubleshootingPage />,
   practice:       <PracticeExamsPage />,
 })
 
-export default function Shell({ theme, onToggleTheme }) {
-  const [activePage, setActivePage] = useState('home')
-  const [sideNavOpen, setSideNavOpen] = useState(false)
+// Group search results by page label
+function groupResults(results) {
+  const map = {}
+  for (const r of results) {
+    if (!map[r.pageLabel]) map[r.pageLabel] = []
+    map[r.pageLabel].push(r)
+  }
+  return Object.entries(map)
+}
 
-  const navigate = (id) => {
-    setActivePage(id)
+export default function Shell({ theme, onToggleTheme }) {
+  const { page: activePage, navigate: routerNavigate } = useHashRouter()
+  const [sideNavOpen, setSideNavOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [targetId, setTargetId] = useState(null)
+
+  const results = useSearch(searchQuery)
+
+  const navigate = useCallback((id) => {
+    routerNavigate(id)
     setSideNavOpen(false)
-    window.scrollTo(0, 0)
+  }, [routerNavigate])
+
+  const openSearch = () => {
+    setSearchQuery('')
+    setTargetId(null)
+    setSearchOpen(true)
+  }
+
+  const handleResultClick = (page, id) => {
+    setSearchOpen(false)
+    setSearchQuery('')
+    setTargetId(id)
+    navigate(page)
   }
 
   const isDark = theme === 'g100'
+  const grouped = groupResults(results)
 
   return (
     <>
@@ -94,6 +127,13 @@ export default function Shell({ theme, onToggleTheme }) {
 
         <HeaderGlobalBar>
           <HeaderGlobalAction
+            aria-label="Search all content"
+            onClick={openSearch}
+            tooltipAlignment="end"
+          >
+            <SearchIcon size={20} />
+          </HeaderGlobalAction>
+          <HeaderGlobalAction
             aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
             onClick={onToggleTheme}
             tooltipAlignment="end"
@@ -124,8 +164,53 @@ export default function Shell({ theme, onToggleTheme }) {
       </Header>
 
       <Content id="main-content">
-        {PAGE_COMPONENTS(navigate)[activePage]}
+        {PAGE_COMPONENTS(navigate, openSearch, targetId)[activePage]}
       </Content>
+
+      {/* ── Global search modal ── */}
+      <Modal
+        open={searchOpen}
+        onRequestClose={() => setSearchOpen(false)}
+        modalHeading="Search all content"
+        passiveModal
+        size="md"
+        className="ocp-search-modal"
+      >
+        <Search
+          id="global-search"
+          labelText="Search"
+          placeholder="Search topics, glossary, flashcards, walkthroughs…"
+          size="lg"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          onClear={() => setSearchQuery('')}
+          autoFocus
+        />
+
+        <div className="ocp-search-results">
+          {searchQuery.trim().length < 2 && (
+            <p className="ocp-search-hint">Type at least 2 characters to search across all content.</p>
+          )}
+          {searchQuery.trim().length >= 2 && results.length === 0 && (
+            <p className="ocp-search-hint">No results for <strong>{searchQuery}</strong>.</p>
+          )}
+          {grouped.map(([pageLabel, items]) => (
+            <div key={pageLabel} className="ocp-search-group">
+              <div className="ocp-search-group__label">{pageLabel}</div>
+              {items.map(r => (
+                <button
+                  key={r.id}
+                  className="ocp-search-result"
+                  onClick={() => handleResultClick(r.page, r.id)}
+                >
+                  <span className="ocp-search-result__title">{r.title}</span>
+                  <span className="ocp-search-result__excerpt">{r.excerpt}</span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      </Modal>
     </>
   )
 }

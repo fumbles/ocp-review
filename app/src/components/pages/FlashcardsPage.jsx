@@ -26,9 +26,14 @@ const TAG_LABELS = {
   ha: 'HA & Reliability',
   cli: 'CLI',
   advanced: '⚡ Advanced',
+  ex380: 'EX380',
+  hcp: 'HCP (EX280+)',
+  ex432: 'EX432 — ACM',
+  ex430: 'EX430 — ACS',
+  ex370: 'EX370 — ODF',
 }
 
-const FILTERS = ['all', 'core', 'ocp', 'networking', 'storage', 'ha', 'cli', 'advanced']
+const FILTERS = ['all', 'core', 'ocp', 'networking', 'storage', 'ha', 'cli', 'advanced', 'ex380', 'hcp', 'ex432', 'ex430', 'ex370']
 const LETTERS = ['A', 'B', 'C', 'D']
 
 function shuffle(arr) {

@@ -506,6 +506,70 @@ oc new-app --template=mysql-persistent</pre>
 <div class="tip"><strong>💡 OpenShift Internal Registry:</strong> OpenShift has a built-in registry at <code>image-registry.openshift-image-registry.svc:5000</code>. Builds push here automatically; pods pull from it using internal service account credentials.</div>
 `},
 
+{id:'hcp', label:'Hosted Control Planes (HyperShift)', content: `
+<h3>Hosted Control Planes &amp; HyperShift</h3>
+<p class="topic-desc">Hosted Control Planes (HCP) is the Red Hat product that runs OpenShift control planes as pods on a shared management cluster instead of on dedicated infrastructure. The upstream project and operator are called <strong>HyperShift</strong>. Understanding the naming distinctions is critical for the exam and for customer conversations.</p>
+
+<div class="section-title">Naming Pitfalls — Know the Difference</div>
+<div class="warn"><strong>⚠️ management cluster ≠ managed cluster</strong><br>
+<strong>Management cluster</strong> (= hosting cluster): where HyperShift runs and control planes live as pods.<br>
+<strong>Managed cluster</strong>: an ACM/MCE concept — a cluster that is imported into the hub and managed via ManifestWork. Completely different role.</div>
+<div class="warn"><strong>⚠️ hosted cluster ≠ hosted control plane</strong><br>
+<strong>Hosted cluster</strong>: the entire logical OCP cluster (control plane pods + data plane workers).<br>
+<strong>Hosted control plane</strong>: only the control-plane components (etcd, API server, controller-manager, Konnectivity) running as pods on the management cluster.</div>
+<div class="warn"><strong>⚠️ HyperShift = project/operator name only</strong><br>
+The upstream project and Kubernetes operator are called HyperShift. The Red Hat product name is <strong>Hosted Control Planes (HCP)</strong>. Do not use "HyperShift" in customer-facing product contexts.</div>
+<div class="warn"><strong>⚠️ hub cluster ≠ management cluster (usually co-located, but not always)</strong><br>
+Hub cluster: where ACM (MultiClusterHub) server components run.<br>
+Management cluster: where HyperShift Operator and control plane pods run. They are often the same cluster, but are architecturally distinct concepts.</div>
+
+<div class="section-title">Architecture Overview</div>
+<div class="definition-card"><h4>Management Cluster (Hosting Cluster)</h4><p>The OpenShift cluster where the HyperShift Operator runs. Each hosted control plane is provisioned as a set of pods in a dedicated namespace on this cluster. The management cluster itself is a normal OCP cluster managed by its own control plane. Also called the <em>hosting cluster</em> — these terms are synonyms.</p></div>
+<div class="definition-card"><h4>Hosted Control Plane (per cluster namespace)</h4><p>The actual control-plane components of a hosted cluster — <code>etcd</code>, <code>kube-apiserver</code>, <code>kube-controller-manager</code>, and <code>Konnectivity server</code> — all running as pods inside one namespace on the management cluster. Tenants interact with this API server exactly as they would with a standard OCP API server.</p></div>
+<div class="definition-card"><h4>Data Plane (Worker Nodes)</h4><p>The worker nodes of a hosted cluster, provisioned on separate infrastructure (often in a different cloud account or region). NodePools define the machine type, count, and OCP version. Workers connect back to the hosted control plane via the Konnectivity tunnel.</p></div>
+<div class="definition-card"><h4>Konnectivity Tunnel</h4><p>The VPN-like connection that bridges the hosted control plane pods on the management cluster with the worker nodes on the data-plane infrastructure. Runs as a server in the hosted control plane namespace and as an agent DaemonSet on each worker node. Required because control plane and workers are on separate networks.</p></div>
+
+<div class="section-title">Key CRDs</div>
+<div class="definition-card"><h4>HostedCluster (hypershift.openshift.io/v1beta1)</h4><p>Created on the management cluster. Defines the complete configuration for a hosted cluster: OCP version, networking CIDRs, pull secret, SSH key, and references to the infrastructure provider (AWS, Azure, bare metal, etc.). Creating this CR triggers the HyperShift Operator to provision the hosted control plane namespace and all control plane pods.</p></div>
+<div class="definition-card"><h4>NodePool (hypershift.openshift.io/v1beta1)</h4><p>Also created on the management cluster. Defines a scalable group of worker nodes for a HostedCluster — machine type, replica count, and OCP version (NodePools can be upgraded independently of the control plane). Multiple NodePools per hosted cluster enable mixed instance types and zone-specific scaling.</p></div>
+
+<div class="section-title">Enabling Components</div>
+<div class="definition-card"><h4>multicluster engine (MCE)</h4><p>The Red Hat operator that deploys the HyperShift Operator on the management cluster and provides foundational cluster lifecycle services. MCE is required for Hosted Control Planes. It is bundled with ACM and also available as a standalone operator. Check its status with: <code>oc get mce multiclusterengine</code>.</p></div>
+<div class="definition-card"><h4>Hub Cluster (ACM)</h4><p>When using ACM, the hub cluster runs MultiClusterHub server components and can manage imported clusters (including hosted clusters) via ManagedCluster/ManifestWork. The hub and management cluster are often co-located, but the hub role (fleet governance) and the management role (hosting control planes) are distinct.</p></div>
+
+<div class="section-title">Benefits &amp; Use Cases</div>
+<div class="tip"><strong>💡 Why Hosted Control Planes?</strong>
+<ul style="margin:0.4rem 0 0 1rem;padding:0">
+  <li><strong>Cost:</strong> Dozens of hosted control planes share one management cluster — no dedicated 3-master infrastructure per tenant cluster.</li>
+  <li><strong>Speed:</strong> Provisioning a new hosted cluster takes minutes, not the 30–45 min of a full IPI install.</li>
+  <li><strong>Independent upgrades:</strong> Control plane and data plane (NodePool) can be upgraded separately, enabling phased rollouts.</li>
+  <li><strong>Multi-tenancy:</strong> Each hosted control plane is isolated in its own namespace with dedicated etcd and API server.</li>
+  <li><strong>Edge:</strong> Worker nodes can run at edge locations while the control plane stays centrally managed.</li>
+</ul></div>
+
+<div class="section-title">Common Commands</div>
+<pre><span class="c"># List all hosted clusters on the management cluster</span>
+oc get hostedcluster -A
+
+<span class="c"># List all NodePools</span>
+oc get nodepool -A
+
+<span class="c"># Check the status of the multicluster engine operator</span>
+oc get mce multiclusterengine -o yaml
+
+<span class="c"># Get the kubeconfig for a hosted cluster (hcp CLI)</span>
+hcp create kubeconfig --namespace &lt;namespace&gt; --name &lt;cluster-name&gt; &gt; hosted-kubeconfig
+
+<span class="c"># View control plane pods for a hosted cluster</span>
+<span class="c"># (namespace = clusters-&lt;hostedcluster-name&gt; by convention)</span>
+oc get pods -n clusters-&lt;hosted-cluster-name&gt;
+
+<span class="c"># Check Konnectivity connectivity</span>
+oc get pods -n clusters-&lt;hosted-cluster-name&gt; | grep konnectivity</pre>
+
+<div class="tip"><strong>📖 Documentation:</strong> <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/hosted_control_planes/index" target="_blank" rel="noopener">Hosted Control Planes — OCP 4.21 Docs ↗</a></div>
+`},
+
 {id:'advanced-cli', label:'⚡ Advanced CLI Reference', content:`
 <h3>Advanced oc / kubectl Commands</h3>
 <p>Power-user commands for day-to-day cluster operations — debugging, introspection, patching, and live manipulation.</p>
@@ -630,7 +694,7 @@ oc rollout undo deployment/myapp --to-revision=3</code></pre>
 <div class="tip"><strong>💡 Tip:</strong> Chain wait with restart for zero-touch rollouts in scripts: <code>oc rollout restart deployment/myapp &amp;&amp; oc rollout status deployment/myapp --timeout=5m</code></div>
 `},
 
-{id:'debug-workflows', label:'🔬 Debug &amp; Troubleshoot Workflows', content:`
+{id:'debug-workflows', label:'🔬 Debug & Troubleshoot Workflows', content:`
 <h3>Systematic Debugging Workflows</h3>
 <p>Step-by-step investigation playbooks for the most common production issues.</p>
 
@@ -727,7 +791,7 @@ df -h /var/lib/containers  <span class="c"># disk pressure?</span></code></pre>
 <div class="tip"><strong>💡 must-gather before escalating:</strong> <code>oc adm must-gather --dest-dir=./must-gather-$(date +%F)</code> — collects logs, events, resource state, and cluster config into a tar. Always attach this to support cases.</div>
 `},
 
-{id:'pro-tips', label:'🧠 Pro Tips &amp; Power Patterns', content:`
+{id:'pro-tips', label:'🧠 Pro Tips & Power Patterns', content:`
 <h3>Pro Tips for Expert Cluster Operators</h3>
 
 <h4>Built-in API Docs (no browser needed)</h4>
@@ -1022,68 +1086,1049 @@ eval "$must_gather_cmd" 2&gt;&amp;1 | tee -a must-gather-console.log</pre>
 <div class="warn"><strong>⚠️ Note:</strong> <code>eval</code> executes the assembled command — review the generated output before running in production environments.</div>
 <div class="tip"><strong>📤 Upload the resulting archive at:</strong> <a href="https://access.redhat.com/support/cases/#/analyze" target="_blank" rel="noopener">Red Hat Support — AI Analysis Upload ↗</a></div>
 `},
-{id:'hcp', label:'Hosted Control Planes (HyperShift)', content: `
-<h3>Hosted Control Planes &amp; HyperShift</h3>
-<p class="topic-desc">Hosted Control Planes (HCP) is the Red Hat product that runs OpenShift control planes as pods on a shared management cluster instead of on dedicated infrastructure. The upstream project and operator are called <strong>HyperShift</strong>. Understanding the naming distinctions is critical for the exam and for customer conversations.</p>
 
-<div class="section-title">Naming Pitfalls — Know the Difference</div>
-<div class="warn"><strong>⚠️ management cluster ≠ managed cluster</strong><br>
-<strong>Management cluster</strong> (= hosting cluster): where HyperShift runs and control planes live as pods.<br>
-<strong>Managed cluster</strong>: an ACM/MCE concept — a cluster that is imported into the hub and managed via ManifestWork. Completely different role.</div>
-<div class="warn"><strong>⚠️ hosted cluster ≠ hosted control plane</strong><br>
-<strong>Hosted cluster</strong>: the entire logical OCP cluster (control plane pods + data plane workers).<br>
-<strong>Hosted control plane</strong>: only the control-plane components (etcd, API server, controller-manager, Konnectivity) running as pods on the management cluster.</div>
-<div class="warn"><strong>⚠️ HyperShift = project/operator name only</strong><br>
-The upstream project and Kubernetes operator are called HyperShift. The Red Hat product name is <strong>Hosted Control Planes (HCP)</strong>. Do not use "HyperShift" in customer-facing product contexts.</div>
-<div class="warn"><strong>⚠️ hub cluster ≠ management cluster (usually co-located, but not always)</strong><br>
-Hub cluster: where ACM (MultiClusterHub) server components run.<br>
-Management cluster: where HyperShift Operator and control plane pods run. They are often the same cluster, but are architecturally distinct concepts.</div>
+// ── EX280 / EX380 / EX432 Extended Content ───────────────────────────────────
 
-<div class="section-title">Architecture Overview</div>
-<div class="definition-card"><h4>Management Cluster (Hosting Cluster)</h4><p>The OpenShift cluster where the HyperShift Operator runs. Each hosted control plane is provisioned as a set of pods in a dedicated namespace on this cluster. The management cluster itself is a normal OCP cluster managed by its own control plane. Also called the <em>hosting cluster</em> — these terms are synonyms.</p></div>
-<div class="definition-card"><h4>Hosted Control Plane (per cluster namespace)</h4><p>The actual control-plane components of a hosted cluster — <code>etcd</code>, <code>kube-apiserver</code>, <code>kube-controller-manager</code>, and <code>Konnectivity server</code> — all running as pods inside one namespace on the management cluster. Tenants interact with this API server exactly as they would with a standard OCP API server.</p></div>
-<div class="definition-card"><h4>Data Plane (Worker Nodes)</h4><p>The worker nodes of a hosted cluster, provisioned on separate infrastructure (often in a different cloud account or region). NodePools define the machine type, count, and OCP version. Workers connect back to the hosted control plane via the Konnectivity tunnel.</p></div>
-<div class="definition-card"><h4>Konnectivity Tunnel</h4><p>The VPN-like connection that bridges the hosted control plane pods on the management cluster with the worker nodes on the data-plane infrastructure. Runs as a server in the hosted control plane namespace and as an agent DaemonSet on each worker node. Required because control plane and workers are on separate networks.</p></div>
+{id:'cluster-upgrades', label:'Cluster Upgrades & MachineConfig', content:`
+<h3>Cluster Upgrades &amp; MachineConfig (EX280/EX380)</h3>
+<p class="topic-desc">OpenShift upgrades are fully operator-driven. The Cluster Version Operator (CVO) manages the control plane upgrade; the Machine Config Operator (MCO) handles node OS configuration and reboots. Understanding both is critical for the EX280 and EX380 exams.</p>
 
-<div class="section-title">Key CRDs</div>
-<div class="definition-card"><h4>HostedCluster (hypershift.openshift.io/v1beta1)</h4><p>Created on the management cluster. Defines the complete configuration for a hosted cluster: OCP version, networking CIDRs, pull secret, SSH key, and references to the infrastructure provider (AWS, Azure, bare metal, etc.). Creating this CR triggers the HyperShift Operator to provision the hosted control plane namespace and all control plane pods.</p></div>
-<div class="definition-card"><h4>NodePool (hypershift.openshift.io/v1beta1)</h4><p>Also created on the management cluster. Defines a scalable group of worker nodes for a HostedCluster — machine type, replica count, and OCP version (NodePools can be upgraded independently of the control plane). Multiple NodePools per hosted cluster enable mixed instance types and zone-specific scaling.</p></div>
+<div class="section-title">Cluster Version Operator (CVO)</div>
+<div class="definition-card"><h4>ClusterVersion CR</h4><p>The single object that controls the desired OCP version for the cluster. The CVO watches this object and drives all operator upgrades. Check upgrade progress here first.</p></div>
+<pre><span class="c"># Check current cluster version and available upgrades</span>
+oc get clusterversion
+oc describe clusterversion version
 
-<div class="section-title">Enabling Components</div>
-<div class="definition-card"><h4>multicluster engine (MCE)</h4><p>The Red Hat operator that deploys the HyperShift Operator on the management cluster and provides foundational cluster lifecycle services. MCE is required for Hosted Control Planes. It is bundled with ACM and also available as a standalone operator. Check its status with: <code>oc get mce multiclusterengine</code>.</p></div>
-<div class="definition-card"><h4>Hub Cluster (ACM)</h4><p>When using ACM, the hub cluster runs MultiClusterHub server components and can manage imported clusters (including hosted clusters) via ManagedCluster/ManifestWork. The hub and management cluster are often co-located, but the hub role (fleet governance) and the management role (hosting control planes) are distinct.</p></div>
+<span class="c"># Trigger a cluster upgrade</span>
+oc adm upgrade --to-latest
+oc adm upgrade --to=4.21.3
 
-<div class="section-title">Benefits &amp; Use Cases</div>
-<div class="tip"><strong>💡 Why Hosted Control Planes?</strong>
+<span class="c"># Watch upgrade progress</span>
+oc get clusteroperators
+oc get clusteroperators | grep -v "True.*False.*False"   <span class="c"># find degraded COs</span>
+
+<span class="c"># Pause/resume upgrade (for maintenance windows)</span>
+oc patch clusterversion version --type merge \
+  -p '{"spec":{"overrides":[{"kind":"Deployment","name":"cluster-version-operator","namespace":"openshift-cluster-version","unmanaged":true}]}}'</pre>
+<div class="warn"><strong>⚠️ Upgrade path:</strong> OCP only supports upgrading one minor version at a time (4.20 → 4.21, not 4.19 → 4.21 directly). Use <code>oc adm upgrade --to-latest</code> to follow the recommended channel path.</div>
+
+<div class="section-title">Machine Config Operator (MCO)</div>
+<div class="definition-card"><h4>MachineConfig (MC)</h4><p>Defines OS-level node configuration: kernel arguments, systemd units, files written to disk, and CRI-O settings. MachineConfigs are applied to nodes via MachineConfigPools. Never edit rendered MachineConfigs — create your own and let MCO merge them.</p></div>
+<div class="definition-card"><h4>MachineConfigPool (MCP)</h4><p>Groups nodes that receive the same set of MachineConfigs. Default pools: <code>master</code> and <code>worker</code>. Custom pools allow different configuration per node role (e.g., infra nodes). When an MCP is updated, MCO cordons, drains, and reboots nodes one at a time (rolling).</p></div>
+<pre><span class="c"># List all MachineConfigPools and their status</span>
+oc get mcp
+
+<span class="c"># List all MachineConfigs (sorted by name)</span>
+oc get mc | sort
+
+<span class="c"># Watch MCO applying a change (shows UPDATING/DEGRADED/READY)</span>
+oc get mcp -w
+
+<span class="c"># Pause a pool (prevents MCO from rebooting nodes during a change window)</span>
+oc patch mcp worker --type merge -p '{"spec":{"paused":true}}'
+oc patch mcp worker --type merge -p '{"spec":{"paused":false}}'   <span class="c"># resume</span>
+
+<span class="c"># Create a custom MachineConfig: add a kernel argument</span>
+cat &lt;&lt;EOF | oc apply -f -
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker
+  name: 99-worker-custom-kernel-args
+spec:
+  kernelArguments:
+    - "transparent_hugepage=never"
+EOF</pre>
+<div class="tip"><strong>💡 MCO rendering:</strong> MCO merges all MachineConfigs in a pool by name sort order and produces a single <em>rendered</em> MachineConfig. The <code>99-</code> prefix convention ensures your custom configs are applied last.</div>
+
+<div class="section-title">Node Maintenance</div>
+<pre><span class="c"># Cordon a node (prevent new pod scheduling)</span>
+oc adm cordon &lt;node-name&gt;
+
+<span class="c"># Drain a node (evict all pods, respects PDBs)</span>
+oc adm drain &lt;node-name&gt; --ignore-daemonsets --delete-emptydir-data
+
+<span class="c"># Uncordon after maintenance</span>
+oc adm uncordon &lt;node-name&gt;
+
+<span class="c"># Force drain (bypass PDBs — use with caution)</span>
+oc adm drain &lt;node-name&gt; --ignore-daemonsets --delete-emptydir-data --force</pre>
+<div class="tip"><strong>📖 Docs:</strong> <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/updating_clusters/index" target="_blank" rel="noopener">Updating clusters — OCP 4.21 ↗</a></div>
+`},
+
+{id:'networking-advanced', label:'Advanced Networking (EX280/EX380)', content:`
+<h3>Advanced Networking: Routes, NetworkPolicy &amp; Egress</h3>
+<p class="topic-desc">The EX280 and EX380 exams both test deep networking knowledge: Route TLS modes, NetworkPolicy isolation, EgressIP, and Multus secondary interfaces.</p>
+
+<div class="section-title">Route TLS Termination Modes</div>
+<div class="definition-card"><h4>Edge</h4><p>TLS is terminated at the router (HAProxy). Traffic between the router and the pod is unencrypted. The router presents the certificate. Most common mode — use when the app doesn't handle TLS itself.</p></div>
+<div class="definition-card"><h4>Passthrough</h4><p>The router forwards raw TLS to the pod without decrypting it. The pod terminates TLS itself. No HAProxy certificate needed. Required for mutual TLS (mTLS) and non-HTTP protocols like database drivers.</p></div>
+<div class="definition-card"><h4>Re-encrypt</h4><p>TLS is terminated at the router, then re-encrypted for the backend pod. Both the external certificate (on the Route) and the service certificate (from ServiceCA) are used. Ensures end-to-end encryption while still allowing the router to inject headers.</p></div>
+<pre><span class="c"># Edge TLS Route with custom certificate</span>
+oc create route edge myapp \
+  --service=myapp \
+  --cert=tls.crt --key=tls.key --ca-cert=ca.crt
+
+<span class="c"># Passthrough Route (app handles TLS)</span>
+oc create route passthrough myapp --service=myapp
+
+<span class="c"># Re-encrypt Route</span>
+oc create route reencrypt myapp \
+  --service=myapp \
+  --cert=tls.crt --key=tls.key \
+  --dest-ca-cert=service-ca.crt</pre>
+
+<div class="section-title">NetworkPolicy</div>
+<div class="definition-card"><h4>NetworkPolicy</h4><p>A namespaced Kubernetes resource that defines pod-level firewall rules using label selectors. By default (no NetworkPolicy), all pods can communicate. Once any NetworkPolicy selects a pod, all traffic not explicitly allowed is denied (default-deny behaviour for selected pods).</p></div>
+<pre><span class="c"># Deny all ingress to a namespace (baseline isolation)</span>
+cat &lt;&lt;EOF | oc apply -f -
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all-ingress
+  namespace: myapp
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+EOF
+
+<span class="c"># Allow only traffic from the same namespace</span>
+cat &lt;&lt;EOF | oc apply -f -
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: myapp
+spec:
+  podSelector: {}
+  ingress:
+  - from:
+    - podSelector: {}
+EOF
+
+<span class="c"># Allow ingress from a specific namespace (e.g., monitoring)</span>
+cat &lt;&lt;EOF | oc apply -f -
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-monitoring
+  namespace: myapp
+spec:
+  podSelector: {}
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: openshift-monitoring
+EOF</pre>
+<div class="warn"><strong>⚠️ Exam gotcha:</strong> <code>podSelector: {}</code> selects ALL pods in the namespace. An empty <code>ingress: []</code> list allows NO ingress. These look similar but behave completely differently.</div>
+
+<div class="section-title">EgressIP</div>
+<div class="definition-card"><h4>EgressIP</h4><p>Assigns a stable, predictable source IP to all traffic leaving pods in a namespace. Required when external firewalls restrict traffic by source IP. Configured as an EgressIP CRD (OVN-K) — nodes must have the <code>k8s.ovn.org/egress-assignable</code> label to host EgressIPs.</p></div>
+<pre><span class="c"># Label a node as eligible for EgressIP hosting</span>
+oc label node &lt;node&gt; k8s.ovn.org/egress-assignable=""
+
+<span class="c"># Create an EgressIP for a namespace</span>
+cat &lt;&lt;EOF | oc apply -f -
+apiVersion: k8s.ovn.org/v1
+kind: EgressIP
+metadata:
+  name: prod-egress
+spec:
+  egressIPs:
+  - 10.0.1.100
+  namespaceSelector:
+    matchLabels:
+      environment: prod
+EOF
+
+<span class="c"># Verify assignment</span>
+oc get egressip prod-egress -o yaml</pre>
+
+<div class="section-title">Multus &amp; Secondary Networks</div>
+<div class="definition-card"><h4>Multus CNI</h4><p>The meta-CNI plugin that allows pods to have multiple network interfaces. OpenShift enables Multus by default. Additional interfaces are defined by NetworkAttachmentDefinition (NAD) CRDs and requested via pod annotations.</p></div>
+<pre><span class="c"># Create a macvlan NetworkAttachmentDefinition</span>
+cat &lt;&lt;EOF | oc apply -f -
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: macvlan-net
+  namespace: myapp
+spec:
+  config: |
+    {"cniVersion":"0.3.1","type":"macvlan","master":"eth0","mode":"bridge","ipam":{"type":"static","addresses":[{"address":"192.168.1.10/24"}]}}
+EOF
+
+<span class="c"># Attach to a pod (annotation)</span>
+<span class="c"># metadata.annotations: k8s.v1.cni.cncf.io/networks: macvlan-net</span></pre>
+<div class="tip"><strong>📖 Docs:</strong> <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/networking/index" target="_blank" rel="noopener">OpenShift Networking — OCP 4.21 ↗</a></div>
+`},
+
+{id:'security-advanced', label:'Security: SCC, OAuth & Certs (EX280/EX380)', content:`
+<h3>Security Context Constraints, OAuth &amp; TLS Certificates</h3>
+<p class="topic-desc">Security is a dominant EX280/EX380 exam topic — SCCs, identity providers, RBAC deep-dives, TLS certificate management, and audit logging.</p>
+
+<div class="section-title">Security Context Constraints (SCC)</div>
+<div class="definition-card"><h4>SCC Hierarchy</h4><p>From most to least restrictive: <code>restricted-v2</code> → <code>restricted</code> → <code>nonroot-v2</code> → <code>nonroot</code> → <code>anyuid</code> → <code>hostnetwork-v2</code> → <code>hostmount-anyuid</code> → <code>hostaccess</code> → <code>privileged</code>. Always use the least permissive SCC that allows the workload to function.</p></div>
+<pre><span class="c"># See what SCC a running pod uses</span>
+oc get pod &lt;name&gt; -o jsonpath='{.metadata.annotations.openshift\.io/scc}'
+
+<span class="c"># Check which SCCs a service account can use</span>
+oc adm policy who-can use scc anyuid
+
+<span class="c"># Grant a ServiceAccount permission to use a specific SCC</span>
+oc adm policy add-scc-to-user anyuid -z &lt;service-account&gt; -n &lt;namespace&gt;
+
+<span class="c"># Remove SCC from service account</span>
+oc adm policy remove-scc-from-user anyuid -z &lt;service-account&gt;
+
+<span class="c"># Describe an SCC to see all its settings</span>
+oc describe scc anyuid</pre>
+<div class="warn"><strong>⚠️ Exam pattern:</strong> When a pod is stuck in a crash loop with permission errors, check SCC first. Common fix: <code>oc adm policy add-scc-to-user anyuid -z default -n &lt;ns&gt;</code>. Never use <code>privileged</code> unless the workload explicitly requires it.</div>
+
+<div class="section-title">OAuth &amp; Identity Providers</div>
+<div class="definition-card"><h4>OAuth cluster CR</h4><p>The single cluster-scoped resource at <code>oc get oauth cluster</code> that configures all identity providers for the cluster. Supports: HTPasswd, LDAP, GitHub, GitLab, Google, OIDC (Keycloak, Okta), Request Header. Multiple providers can coexist.</p></div>
+<pre><span class="c"># Current OAuth configuration</span>
+oc get oauth cluster -o yaml
+
+<span class="c"># Add/update HTPasswd IdP (full replace of identityProviders list)</span>
+oc edit oauth cluster
+
+<span class="c"># Create HTPasswd file and secret</span>
+htpasswd -cBb /tmp/htpasswd admin redhat123
+oc create secret generic htpass-secret \
+  --from-file=htpasswd=/tmp/htpasswd \
+  -n openshift-config
+
+<span class="c"># Update an existing HTPasswd secret in place</span>
+oc get secret htpass-secret -n openshift-config \
+  -o jsonpath='{.data.htpasswd}' | base64 -d &gt; /tmp/htpasswd
+htpasswd -Bb /tmp/htpasswd newuser password123
+oc create secret generic htpass-secret \
+  --from-file=htpasswd=/tmp/htpasswd \
+  -n openshift-config --dry-run=client -o yaml | oc replace -f -
+
+<span class="c"># Remove the default kubeadmin account (AFTER setting up another admin)</span>
+oc delete secret kubeadmin -n kube-system</pre>
+
+<div class="section-title">LDAP Identity Provider</div>
+<pre><span class="c"># Test LDAP connectivity from within the cluster</span>
+oc run ldaptest --image=registry.access.redhat.com/ubi9/ubi \
+  --restart=Never --rm -it -- \
+  ldapsearch -x -H ldap://ldap.example.com:389 \
+  -D "cn=admin,dc=example,dc=com" -w password \
+  -b "dc=example,dc=com" "(uid=testuser)"
+
+<span class="c"># Sync LDAP groups to OpenShift Groups</span>
+oc adm groups sync --sync-config=ldap-sync.yaml --confirm
+
+<span class="c"># Prune groups removed from LDAP</span>
+oc adm groups prune --sync-config=ldap-sync.yaml --confirm</pre>
+
+<div class="section-title">TLS Certificates &amp; Service CA</div>
+<div class="definition-card"><h4>Service CA</h4><p>OpenShift's built-in certificate authority. Automatically provisions TLS certificates for Services annotated with <code>service.beta.openshift.io/serving-cert-secret-name</code>. The CA cert is injected into ConfigMaps annotated with <code>service.beta.openshift.io/inject-cabundle=true</code>.</p></div>
+<pre><span class="c"># Request a service serving certificate</span>
+oc annotate service myapp \
+  service.beta.openshift.io/serving-cert-secret-name=myapp-tls
+
+<span class="c"># Inject the cluster CA bundle into a ConfigMap</span>
+oc annotate configmap my-ca-bundle \
+  service.beta.openshift.io/inject-cabundle=true
+
+<span class="c"># Rotate service certificates (force regeneration)</span>
+oc delete secret myapp-tls   <span class="c"># Service CA recreates it automatically</span>
+
+<span class="c"># Check certificate expiry on a Route</span>
+echo | openssl s_client -connect $(oc get route myapp \
+  -o jsonpath='{.spec.host}'):443 -servername \
+  $(oc get route myapp -o jsonpath='{.spec.host}') 2&gt;/dev/null \
+  | openssl x509 -noout -dates</pre>
+<div class="tip"><strong>📖 Docs:</strong> <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/authentication_and_authorization/index" target="_blank" rel="noopener">Authentication &amp; Authorization — OCP 4.21 ↗</a></div>
+`},
+
+{id:'operators-olm', label:'Operators & OLM Deep Dive (EX280/EX380)', content:`
+<h3>Operators &amp; OLM Deep Dive</h3>
+<p class="topic-desc">The Operator Lifecycle Manager (OLM) manages the full lifecycle of Operators in OpenShift. Understanding its components, approval modes, and troubleshooting patterns is essential for both EX280 and EX380.</p>
+
+<div class="section-title">OLM Architecture</div>
+<div class="definition-card"><h4>CatalogSource</h4><p>A CRD that points OLM to an index of Operators (a registry). Red Hat ships four default CatalogSources: <code>redhat-operators</code>, <code>certified-operators</code>, <code>community-operators</code>, <code>redhat-marketplace</code>. Each is a pod in <code>openshift-marketplace</code> serving a gRPC API.</p></div>
+<div class="definition-card"><h4>Subscription</h4><p>Declares intent to install an operator from a channel in a CatalogSource. Drives InstallPlan creation. Has an <code>installPlanApproval</code> field: <code>Automatic</code> (installs immediately) or <code>Manual</code> (requires human approval of each InstallPlan).</p></div>
+<div class="definition-card"><h4>InstallPlan</h4><p>Created by OLM in response to a Subscription. Describes the exact CSV, CRDs, and RBAC to install. In Manual mode, must be approved: <code>oc patch installplan &lt;name&gt; -n &lt;ns&gt; --type merge -p '{"spec":{"approved":true}}'</code>.</p></div>
+<div class="definition-card"><h4>ClusterServiceVersion (CSV)</h4><p>The operator descriptor — contains its deployment spec, CRDs, permissions, and version. A CSV in <code>Succeeded</code> phase means the operator is healthy. <code>Installing</code> or <code>Failed</code> indicates a problem.</p></div>
+<div class="definition-card"><h4>OperatorGroup</h4><p>Defines which namespaces an operator watches. <code>targetNamespaces: []</code> (or omitted) = cluster-wide (AllNamespaces). A single namespace entry = SingleNamespace mode. Required before installing a namespaced operator.</p></div>
+
+<pre><span class="c"># List all installed operators (CSVs) across all namespaces</span>
+oc get csv -A
+
+<span class="c"># Show a CSV's status — look for Succeeded</span>
+oc get csv -n openshift-operators -o wide
+
+<span class="c"># Inspect a Subscription</span>
+oc get sub -A
+oc describe sub &lt;name&gt; -n &lt;namespace&gt;
+
+<span class="c"># List and approve a pending InstallPlan (Manual mode)</span>
+oc get installplan -n &lt;namespace&gt;
+oc patch installplan &lt;name&gt; -n &lt;namespace&gt; \
+  --type merge -p '{"spec":{"approved":true}}'
+
+<span class="c"># Check CatalogSources health</span>
+oc get catalogsource -n openshift-marketplace
+oc get pods -n openshift-marketplace   <span class="c"># each CatalogSource runs a pod</span>
+
+<span class="c"># Uninstall an operator fully</span>
+oc delete subscription &lt;name&gt; -n &lt;namespace&gt;
+oc delete csv &lt;csv-name&gt; -n &lt;namespace&gt;
+<span class="c"># CRDs are NOT removed automatically — delete manually if needed</span></pre>
+
+<div class="section-title">Disconnected / Air-Gapped Operators</div>
+<div class="definition-card"><h4>ImageContentSourcePolicy / ImageDigestMirrorSet</h4><p>Redirects operator image pulls from Red Hat registries to an internal mirror. ICSP is the legacy resource (OCP ≤ 4.12); IDMS (ImageDigestMirrorSet) is the replacement in OCP 4.13+. Both are cluster-scoped and cause MCO to restart nodes when applied.</p></div>
+<pre><span class="c"># Mirror an operator index to a private registry</span>
+oc mirror --config=./imageset-config.yaml \
+  docker://registry.internal.example.com/mirror
+
+<span class="c"># Apply the generated ICSP/IDMS and CatalogSource</span>
+oc apply -f ./oc-mirror-workspace/results-*/</pre>
+<div class="tip"><strong>📖 Docs:</strong> <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/operators/index" target="_blank" rel="noopener">Operators — OCP 4.21 ↗</a></div>
+`},
+
+{id:'etcd-backup', label:'etcd Backup & Restore (EX380)', content:`
+<h3>etcd Backup &amp; Restore (EX380)</h3>
+<p class="topic-desc">etcd holds all cluster state. Backing it up — and knowing how to restore from backup — is a critical EX380 skill and a real-world operational requirement.</p>
+
+<div class="section-title">Why etcd Backup Matters</div>
+<div class="tip"><strong>💡 When to restore etcd:</strong> Cluster state corruption, accidental mass deletion, failed upgrade, or a control plane node catastrophically failing and leaving fewer than the quorum of etcd members alive (usually need 2 of 3).</div>
+
+<div class="section-title">Taking an etcd Backup</div>
+<pre><span class="c"># SSH to any control-plane node (master)</span>
+ssh core@&lt;master-node&gt;
+
+<span class="c"># Run the cluster-backup script (ships with OCP)</span>
+sudo /usr/local/bin/cluster-backup.sh /home/core/backup
+
+<span class="c"># This produces two files in the target directory:</span>
+<span class="c">#   snapshot_&lt;timestamp&gt;.db   — etcd data snapshot</span>
+<span class="c">#   static_kuberesources_&lt;timestamp&gt;.tar.gz — static pod manifests</span>
+
+<span class="c"># Copy the backup off the cluster</span>
+scp core@&lt;master-node&gt;:/home/core/backup/* ./etcd-backup/</pre>
+<div class="warn"><strong>⚠️ Backup location:</strong> Always copy the backup to an external location (object storage, NFS, another server). A backup stored only on the same node that may need to be restored is useless.</div>
+
+<div class="section-title">Restoring etcd from Backup</div>
+<pre><span class="c"># 1. SSH to the control-plane node you will restore FROM</span>
+<span class="c">#    (the "recovery host" — usually the node with the most recent backup)</span>
+
+<span class="c"># 2. Copy backup files to the recovery host</span>
+scp ./etcd-backup/* core@&lt;recovery-node&gt;:/home/core/backup/
+
+<span class="c"># 3. On the recovery host, run the restore script</span>
+sudo /usr/local/bin/cluster-restore.sh /home/core/backup
+
+<span class="c"># 4. The script will:</span>
+<span class="c">#   - Stop etcd and the API server static pods</span>
+<span class="c">#   - Restore the snapshot to the etcd data directory</span>
+<span class="c">#   - Restart static pods</span>
+
+<span class="c"># 5. Wait for the API server to come back</span>
+watch oc get nodes   <span class="c"># from a separate terminal with a valid kubeconfig</span>
+
+<span class="c"># 6. Force etcd redeployment to remove stale members</span>
+oc get etcd cluster -o yaml
+oc patch etcd cluster --type merge \
+  -p '{"spec":{"forceRedeploymentReason":"recovery-'$(date --iso-8601=minutes)'"}}'
+
+<span class="c"># 7. Monitor etcd operator recovery</span>
+oc get etcd cluster -o jsonpath='{.status.conditions}' | jq</pre>
+
+<div class="section-title">etcd Health Checks</div>
+<pre><span class="c"># Check etcd member health from inside a master node</span>
+sudo -E etcdctl endpoint health \
+  --endpoints=https://localhost:2379 \
+  --cacert=/etc/kubernetes/static-pod-resources/etcd-certs/configmaps/etcd-serving-ca/ca-bundle.crt \
+  --cert=/etc/kubernetes/static-pod-resources/etcd-certs/secrets/etcd-all-certs/etcd-peer-master-0.crt \
+  --key=/etc/kubernetes/static-pod-resources/etcd-certs/secrets/etcd-all-certs/etcd-peer-master-0.key
+
+<span class="c"># Check etcd operator status</span>
+oc get clusteroperator etcd
+oc describe clusteroperator etcd</pre>
+<div class="tip"><strong>📖 Docs:</strong> <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/backup_and_restore/index" target="_blank" rel="noopener">Backup and Restore — OCP 4.21 ↗</a></div>
+`},
+
+{id:'cluster-monitoring-config', label:'Monitoring & Alerting Config (EX380)', content:`
+<h3>Monitoring, Alerting &amp; Custom Metrics (EX380)</h3>
+<p class="topic-desc">EX380 tests deep knowledge of OpenShift's Prometheus-based monitoring stack: configuring retention, persistent storage, alert routing, and enabling user workload monitoring.</p>
+
+<div class="section-title">Cluster Monitoring Stack</div>
+<div class="definition-card"><h4>Cluster Monitoring Operator (CMO)</h4><p>Manages the entire monitoring stack in <code>openshift-monitoring</code>: Prometheus (x2 replicas), Alertmanager (x2), Thanos Querier, kube-state-metrics, node-exporter, and Grafana. Configured via a single ConfigMap.</p></div>
+<div class="definition-card"><h4>User Workload Monitoring</h4><p>A second Prometheus stack in <code>openshift-user-workload-monitoring</code> that scrapes ServiceMonitor/PodMonitor CRDs created in tenant namespaces. Must be explicitly enabled. Allows developers to define alerts for their own applications without cluster-admin access.</p></div>
+
+<pre><span class="c"># Enable user workload monitoring</span>
+cat &lt;&lt;EOF | oc apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    enableUserWorkload: true
+EOF
+
+<span class="c"># Configure Prometheus retention and persistent storage</span>
+cat &lt;&lt;EOF | oc apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    enableUserWorkload: true
+    prometheusK8s:
+      retention: 15d
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3-csi
+          resources:
+            requests:
+              storage: 40Gi
+    alertmanagerMain:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3-csi
+          resources:
+            requests:
+              storage: 2Gi
+EOF</pre>
+
+<div class="section-title">ServiceMonitor &amp; PrometheusRule</div>
+<pre><span class="c"># Create a ServiceMonitor for an app (user workload monitoring)</span>
+cat &lt;&lt;EOF | oc apply -f - -n myapp
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: myapp-monitor
+spec:
+  selector:
+    matchLabels:
+      app: myapp
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+EOF
+
+<span class="c"># Create a custom alert rule</span>
+cat &lt;&lt;EOF | oc apply -f - -n myapp
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: myapp-alerts
+spec:
+  groups:
+  - name: myapp.rules
+    rules:
+    - alert: MyAppHighErrorRate
+      expr: rate(http_requests_total{status=~"5.."}[5m]) &gt; 0.1
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High error rate on myapp"
+EOF</pre>
+
+<div class="section-title">Alertmanager Configuration</div>
+<pre><span class="c"># Get the current alertmanager config secret</span>
+oc get secret alertmanager-main -n openshift-monitoring \
+  -o jsonpath='{.data.alertmanager\.yaml}' | base64 -d
+
+<span class="c"># Create a custom alertmanager config (routes to Slack)</span>
+cat &lt;&lt;EOF &gt; /tmp/alertmanager.yaml
+global:
+  slack_api_url: 'https://hooks.slack.com/services/XXX/YYY/ZZZ'
+route:
+  receiver: slack-notifications
+  group_by: [alertname, namespace]
+receivers:
+- name: slack-notifications
+  slack_configs:
+  - channel: '#alerts'
+    text: '{{ .CommonAnnotations.summary }}'
+EOF
+oc create secret generic alertmanager-main \
+  --from-file=alertmanager.yaml=/tmp/alertmanager.yaml \
+  -n openshift-monitoring --dry-run=client -o yaml | oc replace -f -</pre>
+
+<div class="section-title">Useful Monitoring Commands</div>
+<pre><span class="c"># Access Prometheus UI (port-forward)</span>
+oc port-forward svc/prometheus-operated 9090 -n openshift-monitoring
+
+<span class="c"># Query metrics via API</span>
+TOKEN=$(oc whoami -t)
+curl -H "Authorization: Bearer $TOKEN" \
+  "https://$(oc get route thanos-querier -n openshift-monitoring \
+  -o jsonpath='{.spec.host}')/api/v1/query?query=up"
+
+<span class="c"># Check Alertmanager status</span>
+oc exec -n openshift-monitoring alertmanager-main-0 -- \
+  amtool alert query</pre>
+<div class="tip"><strong>📖 Docs:</strong> <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/monitoring/index" target="_blank" rel="noopener">Monitoring — OCP 4.21 ↗</a></div>
+`},
+
+{id:'acm-governance', label:'ACM Policy & Governance (EX432)', content:`
+<h3>ACM Policy, Governance &amp; Cluster Lifecycle (EX432)</h3>
+<p class="topic-desc">EX432 (OpenShift Advanced Cluster Management Specialist) tests ACM-specific skills: policy enforcement, cluster lifecycle, GitOps application delivery, and fleet observability across multiple clusters.</p>
+
+<div class="section-title">ACM Hub Architecture</div>
+<div class="definition-card"><h4>Hub Cluster</h4><p>Runs the MultiClusterHub operator and all ACM server-side components. Acts as the central management plane for a fleet. One hub manages many managed clusters via the open-cluster-management (OCM) agent on each spoke.</p></div>
+<div class="definition-card"><h4>Managed Cluster (spoke)</h4><p>Any OCP or Kubernetes cluster imported into ACM. The <code>klusterlet</code> agent and <code>work-agent</code> run on the managed cluster, receiving ManifestWork objects from the hub and reporting status back.</p></div>
+
+<div class="section-title">Importing a Cluster</div>
+<pre><span class="c"># Auto-import via ACM console: Clusters → Import → provide kubeconfig</span>
+
+<span class="c"># CLI import: create ManagedCluster CR and KlusterletAddonConfig</span>
+cat &lt;&lt;EOF | oc apply -f -
+apiVersion: cluster.open-cluster-management.io/v1
+kind: ManagedCluster
+metadata:
+  name: spoke-cluster-1
+  labels:
+    cloud: AWS
+    region: us-east-1
+    environment: prod
+spec:
+  hubAcceptsClient: true
+EOF
+
+<span class="c"># Get the import command to run on the spoke cluster</span>
+oc get secret spoke-cluster-1-import \
+  -n spoke-cluster-1 \
+  -o jsonpath='{.data.import\.yaml}' | base64 -d | oc apply -f -
+
+<span class="c"># Verify the cluster joined</span>
+oc get managedcluster spoke-cluster-1</pre>
+
+<div class="section-title">ACM Governance Policies</div>
+<div class="definition-card"><h4>Policy</h4><p>The ACM governance CRD. Defines a desired state that must exist (or must not exist) on managed clusters. <code>remediationAction: inform</code> (report only) or <code>enforce</code> (auto-remediate). Policies are composed of one or more policy templates.</p></div>
+<div class="definition-card"><h4>PlacementBinding</h4><p>Binds a Policy (or PolicySet) to a Placement so ACM knows which clusters the policy applies to. Must exist alongside the Policy and Placement for the policy to be evaluated.</p></div>
+<pre><span class="c"># Example: enforce that a namespace exists on all prod clusters</span>
+cat &lt;&lt;EOF | oc apply -f - -n policies
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: require-monitoring-namespace
+spec:
+  remediationAction: enforce
+  disabled: false
+  policy-templates:
+  - objectDefinition:
+      apiVersion: policy.open-cluster-management.io/v1
+      kind: ConfigurationPolicy
+      metadata:
+        name: monitoring-namespace
+      spec:
+        remediationAction: enforce
+        severity: high
+        object-templates:
+        - complianceType: MustHave
+          objectDefinition:
+            apiVersion: v1
+            kind: Namespace
+            metadata:
+              name: custom-monitoring
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: Placement
+metadata:
+  name: prod-placement
+  namespace: policies
+spec:
+  predicates:
+  - requiredClusterSelector:
+      labelSelector:
+        matchLabels:
+          environment: prod
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: require-monitoring-binding
+  namespace: policies
+placementRef:
+  name: prod-placement
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+subjects:
+- name: require-monitoring-namespace
+  apiGroup: policy.open-cluster-management.io
+  kind: Policy
+EOF
+
+<span class="c"># Check policy compliance across all clusters</span>
+oc get policy -n policies
+oc describe policy require-monitoring-namespace -n policies</pre>
+
+<div class="section-title">ApplicationSet (GitOps Fleet Delivery)</div>
+<pre><span class="c"># Deploy an app to all prod clusters using ApplicationSet + ACM Placement</span>
+cat &lt;&lt;EOF | oc apply -f - -n openshift-gitops
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: myapp-fleet
+spec:
+  generators:
+  - clusterDecisionResource:
+      configMapRef: acm-placement
+      labelSelector:
+        matchLabels:
+          cluster.open-cluster-management.io/placement: prod-placement
+      requeueAfterSeconds: 180
+  template:
+    metadata:
+      name: 'myapp-{{name}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/org/myapp-config
+        targetRevision: main
+        path: overlays/prod
+      destination:
+        server: '{{server}}'
+        namespace: myapp
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+EOF</pre>
+
+<div class="section-title">MultiClusterObservability</div>
+<pre><span class="c"># Check observability hub components</span>
+oc get pods -n open-cluster-management-observability
+
+<span class="c"># Check that spoke metrics are flowing (query from hub Thanos)</span>
+oc port-forward svc/observability-thanos-query-frontend \
+  9090 -n open-cluster-management-observability</pre>
+<div class="tip"><strong>📖 Docs:</strong> <a href="https://access.redhat.com/documentation/en-us/red_hat_advanced_cluster_management_for_kubernetes" target="_blank" rel="noopener">Red Hat ACM Documentation ↗</a></div>
+`},
+
+{id:'gitops-argocd', label:'OpenShift GitOps / ArgoCD (EX380/EX432)', content:`
+<h3>OpenShift GitOps &amp; ArgoCD</h3>
+<p class="topic-desc">OpenShift GitOps is based on ArgoCD. It provides continuous delivery driven by Git as the single source of truth. EX380 tests GitOps configuration; EX432 tests fleet-scale GitOps via ApplicationSets and ACM integration.</p>
+
+<div class="section-title">Core Concepts</div>
+<div class="definition-card"><h4>Application CR</h4><p>The primary ArgoCD/GitOps object. Defines a source (Git repo + path), a destination (cluster + namespace), and sync policy. ArgoCD continuously compares the live cluster state to the desired state in Git and reports drift (or auto-heals it).</p></div>
+<div class="definition-card"><h4>AppProject</h4><p>Defines RBAC for ArgoCD Applications: which source repos are allowed, which destination clusters/namespaces are allowed, and which resource kinds can be deployed. The <code>default</code> project allows everything — create custom projects for multi-team environments.</p></div>
+<div class="definition-card"><h4>Sync Policy</h4><p><code>automated.prune: true</code> removes resources from the cluster that are no longer in Git. <code>automated.selfHeal: true</code> reverts manual changes made to the cluster. Both are disabled by default.</p></div>
+
+<pre><span class="c"># Install the OpenShift GitOps Operator (via subscription)</span>
+cat &lt;&lt;EOF | oc apply -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openshift-gitops-operator
+  namespace: openshift-operators
+spec:
+  channel: latest
+  name: openshift-gitops-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+EOF
+
+<span class="c"># Get the ArgoCD admin password</span>
+oc extract secret/openshift-gitops-cluster \
+  -n openshift-gitops --to=-
+
+<span class="c"># Create an ArgoCD Application</span>
+cat &lt;&lt;EOF | oc apply -f - -n openshift-gitops
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: myapp
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/org/myapp-config
+    targetRevision: HEAD
+    path: overlays/production
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: myapp
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+EOF
+
+<span class="c"># Check sync status</span>
+oc get application -n openshift-gitops
+oc describe application myapp -n openshift-gitops
+
+<span class="c"># Trigger manual sync</span>
+argocd app sync myapp --grpc-web</pre>
+
+<div class="section-title">Adding Private Git Repos</div>
+<pre><span class="c"># Add a private repo via HTTPS with credentials</span>
+oc create secret generic myrepo-creds \
+  --from-literal=type=git \
+  --from-literal=url=https://github.com/myorg/private-repo \
+  --from-literal=username=myuser \
+  --from-literal=password=ghp_xxxxx \
+  -n openshift-gitops
+oc label secret myrepo-creds \
+  argocd.argoproj.io/secret-type=repository \
+  -n openshift-gitops</pre>
+
+<div class="section-title">Kustomize &amp; Helm with ArgoCD</div>
+<pre><span class="c"># Kustomize overlay — ArgoCD auto-detects kustomization.yaml</span>
+<span class="c"># source.path just needs to point to the kustomize directory</span>
+
+<span class="c"># Helm chart from a repo</span>
+<span class="c"># In Application spec:</span>
+<span class="c">#   source:</span>
+<span class="c">#     chart: mychart</span>
+<span class="c">#     repoURL: https://charts.example.com</span>
+<span class="c">#     targetRevision: 1.2.3</span>
+<span class="c">#     helm:</span>
+<span class="c">#       valueFiles: [values-prod.yaml]</span>
+<span class="c">#       parameters:</span>
+<span class="c">#       - name: image.tag</span>
+<span class="c">#         value: v2.0.0</span></pre>
+<div class="tip"><strong>📖 Docs:</strong> <a href="https://docs.redhat.com/en/documentation/red_hat_openshift_gitops" target="_blank" rel="noopener">OpenShift GitOps Documentation ↗</a></div>
+`},
+
+{id:'tekton-pipelines', label:'Tekton Pipelines & CI/CD (EX280/EX380)', content:`
+<h3>Tekton Pipelines &amp; OpenShift CI/CD</h3>
+<p class="topic-desc">OpenShift Pipelines is built on Tekton — a cloud-native Kubernetes-native CI/CD framework. Tasks, Pipelines, PipelineRuns, and Triggers are the core objects tested on EX280 and EX380.</p>
+
+<div class="section-title">Core Tekton Objects</div>
+<div class="definition-card"><h4>Task</h4><p>The smallest unit of work. Defines a sequence of Steps (each a container). Can have Parameters, Workspaces, and Results. Tasks are reusable and can be shared across Pipelines via the Tekton Hub or a ClusterTask.</p></div>
+<div class="definition-card"><h4>Pipeline</h4><p>An ordered graph of Tasks. Defines how parameters flow between tasks, which workspaces are shared, and which tasks run in parallel vs. sequentially. A Pipeline does not run on its own — a PipelineRun instantiates it.</p></div>
+<div class="definition-card"><h4>PipelineRun</h4><p>A specific execution of a Pipeline. Provides parameter values, workspace bindings (PVCs), and triggers creation of TaskRuns. Monitor its status to track pipeline progress.</p></div>
+<div class="definition-card"><h4>EventListener + TriggerTemplate</h4><p>Receives webhook events (GitHub push, PR) and creates PipelineRuns automatically. The EventListener is a pod that exposes an HTTP endpoint; TriggerBindings extract values from the event payload; TriggerTemplates define what to create.</p></div>
+
+<pre><span class="c"># List all Pipelines and Tasks</span>
+oc get pipeline,task -n myapp
+
+<span class="c"># Start a pipeline run interactively</span>
+tkn pipeline start my-build-pipeline \
+  -p IMAGE=quay.io/myorg/myapp:latest \
+  -w name=source,claimName=pipeline-pvc \
+  -n myapp
+
+<span class="c"># Watch a PipelineRun</span>
+tkn pipelinerun logs --last -f -n myapp
+
+<span class="c"># List recent PipelineRuns</span>
+oc get pipelinerun -n myapp --sort-by=.metadata.creationTimestamp
+
+<span class="c"># Describe a failed TaskRun for details</span>
+tkn taskrun describe --last -n myapp</pre>
+
+<div class="section-title">S2I Build Pipeline Pattern</div>
+<pre><span class="c"># Create a BuildConfig (legacy — still on exam)</span>
+oc new-build --strategy=source \
+  --image-stream=python:3.11 \
+  --name=myapp-build \
+  https://github.com/org/myapp.git
+
+<span class="c"># Trigger a build manually</span>
+oc start-build myapp-build
+
+<span class="c"># Follow build logs</span>
+oc logs -f bc/myapp-build
+
+<span class="c"># Set a webhook trigger on the BuildConfig</span>
+oc describe bc/myapp-build | grep -A 5 "Webhook GitHub"</pre>
+
+<div class="section-title">Workspace &amp; PVC Patterns</div>
+<pre><span class="c"># Create a PVC for pipeline workspace</span>
+cat &lt;&lt;EOF | oc apply -f - -n myapp
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pipeline-pvc
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+EOF
+
+<span class="c"># Tekton VolumeClaimTemplate (auto-creates PVC per run)</span>
+<span class="c"># In PipelineRun spec:</span>
+<span class="c">#   workspaces:</span>
+<span class="c">#   - name: source</span>
+<span class="c">#     volumeClaimTemplate:</span>
+<span class="c">#       spec:</span>
+<span class="c">#         accessModes: [ReadWriteOnce]</span>
+<span class="c">#         resources:</span>
+<span class="c">#           requests:</span>
+<span class="c">#             storage: 1Gi</span></pre>
+<div class="tip"><strong>📖 Docs:</strong> <a href="https://docs.redhat.com/en/documentation/red_hat_openshift_pipelines" target="_blank" rel="noopener">OpenShift Pipelines Documentation ↗</a></div>
+`},
+
+{id:'acs-security', label:'Advanced Cluster Security (EX430)', content:`
+<h3>Red Hat Advanced Cluster Security — RHACS (EX430)</h3>
+<p class="topic-desc">RHACS (Red Hat Advanced Cluster Security for Kubernetes) provides vulnerability management, runtime threat detection, compliance scanning, and network policy enforcement for OpenShift workloads. EX430 tests installation, policy authoring, CI/CD integration, and runtime response.</p>
+
+<div class="section-title">Architecture</div>
+<div class="definition-card"><h4>Central</h4><p>The RHACS server — hosts the web console, policy engine, image scanner, and PostgreSQL database. Runs in the <code>stackrox</code> namespace. One Central manages many Secured Clusters. Access at <code>https://central-stackrox.apps.&lt;cluster&gt;</code>.</p></div>
+<div class="definition-card"><h4>Secured Cluster components</h4><p>Three components deploy on every Secured Cluster:</p>
 <ul style="margin:0.4rem 0 0 1rem;padding:0">
-  <li><strong>Cost:</strong> Dozens of hosted control planes share one management cluster — no dedicated 3-master infrastructure per tenant cluster.</li>
-  <li><strong>Speed:</strong> Provisioning a new hosted cluster takes minutes, not the 30–45 min of a full IPI install.</li>
-  <li><strong>Independent upgrades:</strong> Control plane and data plane (NodePool) can be upgraded separately, enabling phased rollouts.</li>
-  <li><strong>Multi-tenancy:</strong> Each hosted control plane is isolated in its own namespace with dedicated etcd and API server.</li>
-  <li><strong>Edge:</strong> Worker nodes can run at edge locations while the control plane stays centrally managed.</li>
+  <li><strong>Sensor</strong> — watches Kubernetes API events; enforces deploy-time policies; communicates with Central</li>
+  <li><strong>Collector</strong> — DaemonSet; captures runtime process execution and network connections at the kernel level via eBPF</li>
+  <li><strong>Admission Controller</strong> — ValidatingWebhook; blocks or warns on deployments violating policies before pods are scheduled</li>
 </ul></div>
+<div class="tip"><strong>💡 Central ≠ Secured Cluster:</strong> Central can run on a separate cluster (or even the same one). The Secured Cluster is any cluster you want to monitor — it just needs Sensor + Collector + Admission Controller deployed via an init bundle.</div>
 
-<div class="section-title">Common Commands</div>
-<pre><span class="c"># List all hosted clusters on the management cluster</span>
-oc get hostedcluster -A
+<div class="section-title">Installation</div>
+<pre><span class="c"># 1. Install the RHACS Operator from OperatorHub</span>
+<span class="c">#    (namespace: rhacs-operator)</span>
 
-<span class="c"># List all NodePools</span>
-oc get nodepool -A
+<span class="c"># 2. Create a Central instance</span>
+cat &lt;&lt;EOF | oc apply -f -
+apiVersion: platform.stackrox.io/v1alpha1
+kind: Central
+metadata:
+  name: stackrox-central-services
+  namespace: stackrox
+spec:
+  central:
+    exposure:
+      route:
+        enabled: true
+    db:
+      isEnabled: Default
+  egress:
+    connectivityPolicy: Online
+  scanner:
+    analyzer:
+      scaling:
+        autoScaling: Enabled
+EOF
 
-<span class="c"># Check the status of the multicluster engine operator</span>
-oc get mce multiclusterengine -o yaml
+<span class="c"># 3. Get the admin password</span>
+oc get secret central-htpasswd -n stackrox \
+  -o jsonpath='{.data.password}' | base64 -d
 
-<span class="c"># Get the kubeconfig for a hosted cluster (hcp CLI)</span>
-hcp create kubeconfig --namespace &lt;namespace&gt; --name &lt;cluster-name&gt; &gt; hosted-kubeconfig
+<span class="c"># 4. Generate an init bundle for a Secured Cluster</span>
+roxctl central init-bundles generate my-cluster \
+  --output-secrets cluster-init-bundle.yaml \
+  --central-endpoint central-stackrox.apps.&lt;cluster&gt;:443
 
-<span class="c"># View control plane pods for a hosted cluster</span>
-<span class="c"># (namespace = clusters-&lt;hostedcluster-name&gt; by convention)</span>
-oc get pods -n clusters-&lt;hosted-cluster-name&gt;
+<span class="c"># 5. Apply the bundle on the Secured Cluster</span>
+oc apply -f cluster-init-bundle.yaml -n stackrox
 
-<span class="c"># Check Konnectivity connectivity</span>
-oc get pods -n clusters-&lt;hosted-cluster-name&gt; | grep konnectivity</pre>
+<span class="c"># 6. Create a SecuredCluster CR on the Secured Cluster</span>
+cat &lt;&lt;EOF | oc apply -f -
+apiVersion: platform.stackrox.io/v1alpha1
+kind: SecuredCluster
+metadata:
+  name: stackrox-secured-cluster-services
+  namespace: stackrox
+spec:
+  clusterName: my-cluster
+  admissionControl:
+    listenOnCreates: true
+    listenOnUpdates: true
+    enforceOnCreates: true
+EOF</pre>
 
-<div class="tip"><strong>📖 Documentation:</strong> <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/hosted_control_planes/index" target="_blank" rel="noopener">Hosted Control Planes — OCP 4.21 Docs ↗</a></div>
+<div class="section-title">Vulnerability Management</div>
+<pre><span class="c"># Scan an image via CLI (roxctl must be configured with Central endpoint)</span>
+roxctl image scan \
+  --image=quay.io/myorg/myapp:latest \
+  --endpoint=central-stackrox.apps.&lt;cluster&gt;:443 \
+  --output=table
+
+<span class="c"># Check image against policies (returns non-zero on policy violation)</span>
+roxctl image check \
+  --image=quay.io/myorg/myapp:latest \
+  --endpoint=central-stackrox.apps.&lt;cluster&gt;:443
+
+<span class="c"># Use in CI/CD (fails the pipeline on critical CVE policy violation)</span>
+roxctl image check \
+  --image=quay.io/myorg/myapp:$(git rev-parse --short HEAD) \
+  --endpoint=$ROX_CENTRAL_ADDRESS \
+  --token-file=$ROX_API_TOKEN_FILE</pre>
+
+<div class="section-title">Policy Lifecycle Stages</div>
+<div class="definition-card"><h4>Build</h4><p>Policy evaluated when an image is built or scanned. Enforced via <code>roxctl image check</code> in CI/CD. Example: "Image must not contain critical CVEs with a fix available."</p></div>
+<div class="definition-card"><h4>Deploy</h4><p>Policy evaluated by the Admission Controller when a Deployment/Pod is created or updated. Blocks or warns before the workload runs. Example: "Container must not run as root UID."</p></div>
+<div class="definition-card"><h4>Runtime</h4><p>Policy evaluated continuously by Sensor against live process and network activity captured by Collector. Example: "Alert if bash or curl exec'd in a production container."</p></div>
+<div class="warn"><strong>⚠️ Enforcement vs. Inform:</strong> ACS policies default to <strong>Inform</strong> (generate violation, no blocking). Set enforcement to <strong>Enforce</strong> to block at deploy time or kill pods at runtime. Always test in Inform mode first.</div>
+
+<div class="section-title">Network Graph &amp; Policy Generator</div>
+<pre><span class="c"># In the RHACS console: Network → Network Graph</span>
+<span class="c"># View all observed connections between deployments</span>
+<span class="c"># Green = active flow, grey = allowed-but-not-observed</span>
+
+<span class="c"># Generate NetworkPolicy YAML from observed traffic</span>
+<span class="c"># 1. Select a namespace in the Network Graph</span>
+<span class="c"># 2. Click "Network Policy Simulator"</span>
+<span class="c"># 3. Download the generated NetworkPolicy YAML</span>
+<span class="c"># 4. Apply: oc apply -f generated-netpol.yaml</span></pre>
+
+<div class="section-title">Compliance</div>
+<pre><span class="c"># Run a compliance scan from the RHACS console</span>
+<span class="c"># Compliance → Compliance (1.0) → Scan Environment</span>
+<span class="c"># Profiles: CIS OCP 4, CIS K8s, NIST 800-53, PCI-DSS, HIPAA</span>
+
+<span class="c"># The Compliance Operator integrates with ACS:</span>
+<span class="c"># Install Compliance Operator, create ScanSetting + ScanSettingBinding</span>
+<span class="c"># ACS pulls results and shows them in the Compliance dashboard</span>
+
+<span class="c"># Check compliance results via CLI</span>
+oc get compliancecheckresult -A | grep FAIL | head -20</pre>
+
+<div class="section-title">Key Commands</div>
+<pre><span class="c"># Check RHACS components on a secured cluster</span>
+oc get pods -n stackrox
+
+<span class="c"># Get Central admin password</span>
+oc get secret central-htpasswd -n stackrox \
+  -o jsonpath='{.data.password}' | base64 -d &amp;&amp; echo
+
+<span class="c"># List policy violations via roxctl</span>
+roxctl central debug dump --output-dir ./debug-dump \
+  --endpoint=$ROX_CENTRAL_ADDRESS
+
+<span class="c"># List all ACS policies (REST API)</span>
+curl -sk -H "Authorization: Bearer $ROX_API_TOKEN" \
+  "https://$ROX_CENTRAL_ADDRESS/v1/policies" | jq '.policies[].name'</pre>
+<div class="tip"><strong>📖 Docs:</strong> <a href="https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_security_for_kubernetes" target="_blank" rel="noopener">Red Hat ACS Documentation ↗</a></div>
+`},
+
+{id:'odf-deep-dive', label:'OpenShift Data Foundation (EX370)', content:`
+<h3>OpenShift Data Foundation — ODF (EX370)</h3>
+<p class="topic-desc">ODF is Red Hat's software-defined storage platform for OpenShift, built on Rook-Ceph and NooBaa. EX370 tests deploying ODF, provisioning block/file/object storage, configuring disaster recovery, and troubleshooting storage issues.</p>
+
+<div class="section-title">Storage Types &amp; StorageClasses</div>
+<div class="definition-card"><h4>Block (Ceph RBD) — ReadWriteOnce</h4><p>Each PVC maps to a Ceph image (raw block device). Best for databases, stateful apps that need dedicated disk I/O. StorageClass: <code>ocs-storagecluster-ceph-rbd</code>. Supports VolumeSnapshots for backup.</p></div>
+<div class="definition-card"><h4>File (CephFS) — ReadWriteMany</h4><p>Multiple pods mount the same PVC simultaneously. Best for shared config, media serving, CI artifact caching. StorageClass: <code>ocs-storagecluster-cephfs</code>. Backed by Ceph MDS (metadata server).</p></div>
+<div class="definition-card"><h4>Object (S3 / NooBaa MCG) — ObjectBucketClaim</h4><p>S3-compatible object storage via NooBaa Multicloud Gateway. Apps request buckets via ObjectBucketClaim; ODF provisions a bucket and injects endpoint/credentials as a ConfigMap + Secret.</p></div>
+
+<div class="section-title">Ceph Daemon Architecture</div>
+<div class="definition-card"><h4>MON (Monitor)</h4><p>Maintains the cluster map quorum. 3 required for production. Failure of 2+ MONs makes the cluster unavailable. Check: <code>oc get pods -n openshift-storage | grep rook-ceph-mon</code></p></div>
+<div class="definition-card"><h4>OSD (Object Storage Daemon)</h4><p>One per disk. Handles actual data storage, replication, and recovery. Minimum 3 OSDs for 3-way replication. The most common failure unit — individual OSD failure is tolerated.</p></div>
+<div class="definition-card"><h4>MGR (Manager)</h4><p>Hosts the Ceph dashboard, Prometheus exporter, and the CRUSH/balancer modules. Two MGR pods for HA in ODF.</p></div>
+<div class="definition-card"><h4>MDS (Metadata Server)</h4><p>Required for CephFS only. Handles filesystem namespace operations. Two MDS pods (active + standby). Data I/O bypasses MDS — only metadata (ls, stat, mkdir) hits it.</p></div>
+
+<pre><span class="c"># Check overall ODF health</span>
+oc get storagecluster -n openshift-storage
+oc get cephcluster -n openshift-storage
+
+<span class="c"># Check all ODF pods</span>
+oc get pods -n openshift-storage
+
+<span class="c"># Check Ceph cluster health via the toolbox</span>
+oc rsh -n openshift-storage \
+  $(oc get pod -n openshift-storage -l app=rook-ceph-tools \
+  -o jsonpath='{.items[0].metadata.name}')
+ceph status
+ceph osd status
+ceph df</pre>
+
+<div class="section-title">Deploying ODF</div>
+<pre><span class="c"># 1. Label storage nodes (minimum 3)</span>
+oc label node &lt;node1&gt; cluster.ocs.openshift.io/openshift-storage=""
+oc label node &lt;node2&gt; cluster.ocs.openshift.io/openshift-storage=""
+oc label node &lt;node3&gt; cluster.ocs.openshift.io/openshift-storage=""
+
+<span class="c"># 2. Install ODF Operator from OperatorHub</span>
+<span class="c">#    (namespace: openshift-storage)</span>
+
+<span class="c"># 3. Create the StorageSystem (triggers StorageCluster creation)</span>
+<span class="c">#    Web console: Storage → Data Foundation → Create StorageSystem</span>
+<span class="c">#    OR apply a StorageCluster CR directly:</span>
+cat &lt;&lt;EOF | oc apply -f -
+apiVersion: ocs.openshift.io/v1
+kind: StorageCluster
+metadata:
+  name: ocs-storagecluster
+  namespace: openshift-storage
+spec:
+  storageDeviceSets:
+  - name: ocs-deviceset
+    count: 1
+    replica: 3
+    dataPVCTemplate:
+      spec:
+        storageClassName: gp3-csi
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 512Gi
+EOF</pre>
+
+<div class="section-title">ObjectBucketClaim (S3)</div>
+<pre><span class="c"># Request an S3 bucket</span>
+cat &lt;&lt;EOF | oc apply -f -
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: my-bucket
+  namespace: myapp
+spec:
+  generateBucketName: my-bucket
+  storageClassName: openshift-storage.noobaa.io
+EOF
+
+<span class="c"># ODF creates a ConfigMap and Secret with the same name</span>
+oc get cm my-bucket -n myapp -o yaml   <span class="c"># endpoint, bucket name</span>
+oc get secret my-bucket -n myapp -o yaml   <span class="c"># access key, secret key</span>
+
+<span class="c"># Use in a pod (env vars)</span>
+<span class="c"># envFrom:</span>
+<span class="c">#   - configMapRef: { name: my-bucket }</span>
+<span class="c">#   - secretRef:    { name: my-bucket }</span></pre>
+
+<div class="section-title">ODF Disaster Recovery</div>
+<div class="definition-card"><h4>Regional DR (Async)</h4><p>Two separate ODF clusters in different sites. Ceph RBD mirroring replicates block volumes asynchronously. RPO &gt; 0. Use when sites are geographically distant (high latency). Requires ACM + ODF DR operator + MirrorPeer exchange between sites.</p></div>
+<div class="definition-card"><h4>Metro DR (Sync)</h4><p>Two ODF clusters with synchronous RBD mirroring. RPO = 0 — every write completes on both sites before acknowledging. Requires &lt;5ms latency between sites. A third arbiter site provides quorum. Higher write latency than async DR.</p></div>
+<pre><span class="c"># Check MirrorPeer status (on hub cluster)</span>
+oc get mirrorpeer
+
+<span class="c"># Check VolumeReplicationGroups (on primary cluster)</span>
+oc get volumereplicationgroup -A
+
+<span class="c"># Trigger application failover (on hub cluster)</span>
+oc patch drplacementcontrol &lt;name&gt; -n &lt;namespace&gt; \
+  --type merge -p '{"spec":{"action":"Failover","failoverCluster":"&lt;secondary-cluster-name&gt;"}}'
+
+<span class="c"># Trigger relocate (move back to primary after recovery)</span>
+oc patch drplacementcontrol &lt;name&gt; -n &lt;namespace&gt; \
+  --type merge -p '{"spec":{"action":"Relocate","preferredCluster":"&lt;primary-cluster-name&gt;"}}'</pre>
+
+<div class="section-title">Troubleshooting ODF</div>
+<pre><span class="c"># Open the Ceph toolbox for raw ceph commands</span>
+oc rsh -n openshift-storage \
+  $(oc get pod -n openshift-storage -l app=rook-ceph-tools \
+  -o jsonpath='{.items[0].metadata.name}')
+
+ceph status                    <span class="c"># overall health: HEALTH_OK / WARN / ERR</span>
+ceph osd status                <span class="c"># per-OSD up/down/weight</span>
+ceph osd df                    <span class="c"># disk usage per OSD</span>
+ceph df                        <span class="c"># pool-level usage</span>
+ceph health detail             <span class="c"># full health warning text</span>
+ceph pg stat                   <span class="c"># placement group summary</span>
+rados df                       <span class="c"># object-level stats</span>
+
+<span class="c"># Check ODF operator logs</span>
+oc logs -n openshift-storage \
+  $(oc get pod -n openshift-storage -l app=ocs-operator \
+  -o jsonpath='{.items[0].metadata.name}') | tail -50
+
+<span class="c"># Check a specific OSD that is down</span>
+oc logs -n openshift-storage \
+  $(oc get pod -n openshift-storage -l osd=&lt;id&gt; \
+  -o jsonpath='{.items[0].metadata.name}')</pre>
+
+<div class="warn"><strong>⚠️ HEALTH_WARN vs HEALTH_ERR:</strong> HEALTH_WARN means the cluster is functional but degraded (e.g. replication below target). HEALTH_ERR means I/O may be blocked. Always check <code>ceph health detail</code> to see the specific cause before taking action.</div>
+<div class="tip"><strong>📖 Docs:</strong> <a href="https://access.redhat.com/documentation/en-us/red_hat_openshift_data_foundation" target="_blank" rel="noopener">ODF Documentation ↗</a> &nbsp;|&nbsp; <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/storage/index" target="_blank" rel="noopener">OCP Storage — OCP 4.21 ↗</a></div>
 `},
 ];
 

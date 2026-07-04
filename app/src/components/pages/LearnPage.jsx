@@ -1,10 +1,21 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Grid, Column, Search } from '@carbon/react'
 import { topics } from '../../data/topics'
 
-export default function LearnPage() {
-  const [activeId, setActiveId] = useState(topics[0].id)
+export default function LearnPage({ targetId }) {
+  const [activeId, setActiveId] = useState(() =>
+    // If arriving from search with a known topic id, start on that topic
+    targetId && topics.find(t => t.id === targetId) ? targetId : topics[0].id
+  )
   const [query, setQuery] = useState('')
+
+  // If targetId changes (user clicks another search result while already on Learn),
+  // switch to the new topic
+  useEffect(() => {
+    if (targetId && topics.find(t => t.id === targetId)) {
+      setActiveId(targetId)
+    }
+  }, [targetId])
 
   const filtered = useMemo(() =>
     query.trim()
@@ -42,20 +53,23 @@ export default function LearnPage() {
               onChange={e => setQuery(e.target.value)}
               onClear={() => setQuery('')}
             />
-            <nav aria-label="Topics">
-              {filtered.length === 0 && (
-                <p className="ocp-learn__no-results">No topics match.</p>
-              )}
-              {filtered.map(t => (
-                <button
-                  key={t.id}
-                  className={`ocp-learn__topic-item${t.id === visibleActive ? ' ocp-learn__topic-item--active' : ''}`}
-                  onClick={() => setActiveId(t.id)}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </nav>
+            <div className="ocp-learn__nav-wrap">
+              <nav aria-label="Topics" className="ocp-learn__nav-scroll">
+                {filtered.length === 0 && (
+                  <p className="ocp-learn__no-results">No topics match.</p>
+                )}
+                {filtered.map(t => (
+                  <button
+                    key={t.id}
+                    className={`ocp-learn__topic-item${t.id === visibleActive ? ' ocp-learn__topic-item--active' : ''}`}
+                    onClick={() => setActiveId(t.id)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </nav>
+              <div className="ocp-learn__scroll-hint" aria-hidden="true">▼ more topics</div>
+            </div>
           </div>
         </Column>
 
