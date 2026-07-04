@@ -1022,5 +1022,68 @@ eval "$must_gather_cmd" 2&gt;&amp;1 | tee -a must-gather-console.log</pre>
 <div class="warn"><strong>⚠️ Note:</strong> <code>eval</code> executes the assembled command — review the generated output before running in production environments.</div>
 <div class="tip"><strong>📤 Upload the resulting archive at:</strong> <a href="https://access.redhat.com/support/cases/#/analyze" target="_blank" rel="noopener">Red Hat Support — AI Analysis Upload ↗</a></div>
 `},
+{id:'hcp', label:'Hosted Control Planes (HyperShift)', content: `
+<h3>Hosted Control Planes &amp; HyperShift</h3>
+<p class="topic-desc">Hosted Control Planes (HCP) is the Red Hat product that runs OpenShift control planes as pods on a shared management cluster instead of on dedicated infrastructure. The upstream project and operator are called <strong>HyperShift</strong>. Understanding the naming distinctions is critical for the exam and for customer conversations.</p>
+
+<div class="section-title">Naming Pitfalls — Know the Difference</div>
+<div class="warn"><strong>⚠️ management cluster ≠ managed cluster</strong><br>
+<strong>Management cluster</strong> (= hosting cluster): where HyperShift runs and control planes live as pods.<br>
+<strong>Managed cluster</strong>: an ACM/MCE concept — a cluster that is imported into the hub and managed via ManifestWork. Completely different role.</div>
+<div class="warn"><strong>⚠️ hosted cluster ≠ hosted control plane</strong><br>
+<strong>Hosted cluster</strong>: the entire logical OCP cluster (control plane pods + data plane workers).<br>
+<strong>Hosted control plane</strong>: only the control-plane components (etcd, API server, controller-manager, Konnectivity) running as pods on the management cluster.</div>
+<div class="warn"><strong>⚠️ HyperShift = project/operator name only</strong><br>
+The upstream project and Kubernetes operator are called HyperShift. The Red Hat product name is <strong>Hosted Control Planes (HCP)</strong>. Do not use "HyperShift" in customer-facing product contexts.</div>
+<div class="warn"><strong>⚠️ hub cluster ≠ management cluster (usually co-located, but not always)</strong><br>
+Hub cluster: where ACM (MultiClusterHub) server components run.<br>
+Management cluster: where HyperShift Operator and control plane pods run. They are often the same cluster, but are architecturally distinct concepts.</div>
+
+<div class="section-title">Architecture Overview</div>
+<div class="definition-card"><h4>Management Cluster (Hosting Cluster)</h4><p>The OpenShift cluster where the HyperShift Operator runs. Each hosted control plane is provisioned as a set of pods in a dedicated namespace on this cluster. The management cluster itself is a normal OCP cluster managed by its own control plane. Also called the <em>hosting cluster</em> — these terms are synonyms.</p></div>
+<div class="definition-card"><h4>Hosted Control Plane (per cluster namespace)</h4><p>The actual control-plane components of a hosted cluster — <code>etcd</code>, <code>kube-apiserver</code>, <code>kube-controller-manager</code>, and <code>Konnectivity server</code> — all running as pods inside one namespace on the management cluster. Tenants interact with this API server exactly as they would with a standard OCP API server.</p></div>
+<div class="definition-card"><h4>Data Plane (Worker Nodes)</h4><p>The worker nodes of a hosted cluster, provisioned on separate infrastructure (often in a different cloud account or region). NodePools define the machine type, count, and OCP version. Workers connect back to the hosted control plane via the Konnectivity tunnel.</p></div>
+<div class="definition-card"><h4>Konnectivity Tunnel</h4><p>The VPN-like connection that bridges the hosted control plane pods on the management cluster with the worker nodes on the data-plane infrastructure. Runs as a server in the hosted control plane namespace and as an agent DaemonSet on each worker node. Required because control plane and workers are on separate networks.</p></div>
+
+<div class="section-title">Key CRDs</div>
+<div class="definition-card"><h4>HostedCluster (hypershift.openshift.io/v1beta1)</h4><p>Created on the management cluster. Defines the complete configuration for a hosted cluster: OCP version, networking CIDRs, pull secret, SSH key, and references to the infrastructure provider (AWS, Azure, bare metal, etc.). Creating this CR triggers the HyperShift Operator to provision the hosted control plane namespace and all control plane pods.</p></div>
+<div class="definition-card"><h4>NodePool (hypershift.openshift.io/v1beta1)</h4><p>Also created on the management cluster. Defines a scalable group of worker nodes for a HostedCluster — machine type, replica count, and OCP version (NodePools can be upgraded independently of the control plane). Multiple NodePools per hosted cluster enable mixed instance types and zone-specific scaling.</p></div>
+
+<div class="section-title">Enabling Components</div>
+<div class="definition-card"><h4>multicluster engine (MCE)</h4><p>The Red Hat operator that deploys the HyperShift Operator on the management cluster and provides foundational cluster lifecycle services. MCE is required for Hosted Control Planes. It is bundled with ACM and also available as a standalone operator. Check its status with: <code>oc get mce multiclusterengine</code>.</p></div>
+<div class="definition-card"><h4>Hub Cluster (ACM)</h4><p>When using ACM, the hub cluster runs MultiClusterHub server components and can manage imported clusters (including hosted clusters) via ManagedCluster/ManifestWork. The hub and management cluster are often co-located, but the hub role (fleet governance) and the management role (hosting control planes) are distinct.</p></div>
+
+<div class="section-title">Benefits &amp; Use Cases</div>
+<div class="tip"><strong>💡 Why Hosted Control Planes?</strong>
+<ul style="margin:0.4rem 0 0 1rem;padding:0">
+  <li><strong>Cost:</strong> Dozens of hosted control planes share one management cluster — no dedicated 3-master infrastructure per tenant cluster.</li>
+  <li><strong>Speed:</strong> Provisioning a new hosted cluster takes minutes, not the 30–45 min of a full IPI install.</li>
+  <li><strong>Independent upgrades:</strong> Control plane and data plane (NodePool) can be upgraded separately, enabling phased rollouts.</li>
+  <li><strong>Multi-tenancy:</strong> Each hosted control plane is isolated in its own namespace with dedicated etcd and API server.</li>
+  <li><strong>Edge:</strong> Worker nodes can run at edge locations while the control plane stays centrally managed.</li>
+</ul></div>
+
+<div class="section-title">Common Commands</div>
+<pre><span class="c"># List all hosted clusters on the management cluster</span>
+oc get hostedcluster -A
+
+<span class="c"># List all NodePools</span>
+oc get nodepool -A
+
+<span class="c"># Check the status of the multicluster engine operator</span>
+oc get mce multiclusterengine -o yaml
+
+<span class="c"># Get the kubeconfig for a hosted cluster (hcp CLI)</span>
+hcp create kubeconfig --namespace &lt;namespace&gt; --name &lt;cluster-name&gt; &gt; hosted-kubeconfig
+
+<span class="c"># View control plane pods for a hosted cluster</span>
+<span class="c"># (namespace = clusters-&lt;hostedcluster-name&gt; by convention)</span>
+oc get pods -n clusters-&lt;hosted-cluster-name&gt;
+
+<span class="c"># Check Konnectivity connectivity</span>
+oc get pods -n clusters-&lt;hosted-cluster-name&gt; | grep konnectivity</pre>
+
+<div class="tip"><strong>📖 Documentation:</strong> <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/hosted_control_planes/index" target="_blank" rel="noopener">Hosted Control Planes — OCP 4.21 Docs ↗</a></div>
+`},
 ];
 

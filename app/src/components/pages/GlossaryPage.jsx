@@ -7,7 +7,7 @@ const GL_CATS = {
   networking: 'Networking', storage: 'Storage', security: 'Security',
   monitoring: 'Monitoring', builds: 'Builds & CI/CD', advanced: 'Advanced / Platform',
   odf: 'Data Foundation (ODF)', backup: 'Backup & Restore', virt: 'Virtualization',
-  multicluster: 'Multi-Cluster (ACM)', acronym: 'Acronyms',
+  multicluster: 'Multi-Cluster (ACM)', hcp: 'Hosted Control Planes', acronym: 'Acronyms',
 }
 
 export default function GlossaryPage() {
