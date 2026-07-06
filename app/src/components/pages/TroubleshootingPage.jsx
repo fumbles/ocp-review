@@ -1,9 +1,18 @@
 import { useState, useMemo } from 'react'
-import { Grid, Column, Search, Accordion, AccordionItem, Tag, CodeSnippet } from '@carbon/react'
+import { Grid, Column, Search, Accordion, AccordionItem, Tag, CodeSnippet, Modal } from '@carbon/react'
 import { troubleshootingSections } from '../../data/troubleshooting'
+
+const riskConfig = {
+  'read-only': { label: 'Read-only', type: 'green' },
+  'changes-workload': { label: 'Changes workload', type: 'blue' },
+  'node-impacting': { label: 'Node-impacting', type: 'purple' },
+  'high-risk': { label: 'High-risk', type: 'red' },
+  'cluster-impacting': { label: 'Cluster-impacting', type: 'magenta' },
+}
 
 export default function TroubleshootingPage() {
   const [query, setQuery] = useState('')
+  const [expandedCommand, setExpandedCommand] = useState(null)
 
   const filtered = useMemo(() => {
     if (!query.trim()) return troubleshootingSections
@@ -44,6 +53,16 @@ export default function TroubleshootingPage() {
         </Column>
 
         <Column lg={16} md={8} sm={4}>
+          <div className="ocp-ts__legend" aria-label="Command risk legend">
+            {Object.entries(riskConfig).map(([key, value]) => (
+              <span key={key} className="ocp-ts__legend-item">
+                <Tag type={value.type} size="sm">{value.label}</Tag>
+              </span>
+            ))}
+          </div>
+        </Column>
+
+        <Column lg={16} md={8} sm={4}>
           {filtered.length === 0 && (
             <p className="ocp-ts__empty">No commands match your search.</p>
           )}
@@ -71,7 +90,7 @@ export default function TroubleshootingPage() {
                   <div className="ocp-ts__sub-label ocp-ts__sub-label--basic">🟢 Basic Triage</div>
                   {sec.basic.length === 0
                     ? <p className="ocp-ts__empty">No basic commands match.</p>
-                    : sec.basic.map((r, i) => <CmdRow key={i} r={r} />)
+                    : sec.basic.map((r, i) => <CmdRow key={i} r={r} onExpand={setExpandedCommand} />)
                   }
                 </div>
                 {/* Expert */}
@@ -79,7 +98,7 @@ export default function TroubleshootingPage() {
                   <div className="ocp-ts__sub-label ocp-ts__sub-label--expert">⚡ Expert Debugging</div>
                   {sec.expert.length === 0
                     ? <p className="ocp-ts__empty">No expert commands match.</p>
-                    : sec.expert.map((r, i) => <CmdRow key={i} r={r} />)
+                    : sec.expert.map((r, i) => <CmdRow key={i} r={r} onExpand={setExpandedCommand} />)
                   }
                 </div>
               </AccordionItem>
@@ -87,17 +106,53 @@ export default function TroubleshootingPage() {
           </Accordion>
         </Column>
       </Grid>
+
+      <Modal
+        open={!!expandedCommand}
+        onRequestClose={() => setExpandedCommand(null)}
+        modalHeading="Full command"
+        passiveModal
+        size="md"
+      >
+        {expandedCommand && (
+          <div className="ocp-ts__modal-content">
+            <div className="ocp-ts__cmd-copy">
+              {expandedCommand.risk && (
+                <Tag type={riskConfig[expandedCommand.risk].type} size="sm" className="ocp-ts__risk-tag">
+                  {riskConfig[expandedCommand.risk].label}
+                </Tag>
+              )}
+              <p className="ocp-ts__cmd-desc">{expandedCommand.desc}</p>
+            </div>
+            <CodeSnippet type="multi" feedback="Copied!" className="ocp-ts__modal-snippet">
+              {expandedCommand.cmd}
+            </CodeSnippet>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }
 
-function CmdRow({ r }) {
+function CmdRow({ r, onExpand }) {
   return (
     <div className="ocp-ts__cmd-row">
-      <CodeSnippet type="single" feedback="Copied!" className="ocp-ts__snippet">
+      <div className="ocp-ts__cmd-meta">
+        <div className="ocp-ts__cmd-copy">
+          {r.risk && (
+            <Tag type={riskConfig[r.risk].type} size="sm" className="ocp-ts__risk-tag">
+              {riskConfig[r.risk].label}
+            </Tag>
+          )}
+          <p className="ocp-ts__cmd-desc">{r.desc}</p>
+        </div>
+        <button type="button" className="ocp-ts__expand-btn" onClick={() => onExpand(r)}>
+          View full command
+        </button>
+      </div>
+      <CodeSnippet type="multi" feedback="Copied!" className="ocp-ts__snippet" wrapText={false}>
         {r.cmd}
       </CodeSnippet>
-      <p className="ocp-ts__cmd-desc">{r.desc}</p>
     </div>
   )
 }
