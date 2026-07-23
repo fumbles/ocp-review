@@ -568,6 +568,73 @@ oc get pods -n clusters-&lt;hosted-cluster-name&gt;
 oc get pods -n clusters-&lt;hosted-cluster-name&gt; | grep konnectivity</pre>
 
 <div class="tip"><strong>📖 Documentation:</strong> <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/hosted_control_planes/index" target="_blank" rel="noopener">Hosted Control Planes — OCP 4.21 Docs ↗</a></div>
+
+<div class="section-title">Terminology Deep-Dive</div>
+<p>The naming around HCP evolved across upstream projects, product names, API conventions, and documentation over several years. The CLI tool is called <code>hcp</code>, but its version output says <code>openshift/hypershift</code>. The operator is called the HyperShift Operator, but the product name is <em>hosted control planes</em>. The API group is <code>hypershift.openshift.io</code>, but "HyperShift" rarely appears in the official docs anymore. Use the following table to keep these straight. <a href="https://developers.redhat.com/articles/2026/07/01/demystify-terminology-openshift-hosted-control-planes" target="_blank" rel="noopener">Full article ↗</a></p>
+<table class="cmd-table">
+<tr><th>Term</th><th>What it means</th><th>Watch out</th></tr>
+<tr><td><strong>Management cluster</strong></td><td>The OCP cluster where MCE + HyperShift Operator run and where control plane pods live</td><td>Synonymous with <em>hosting cluster</em>. NOT the same as <em>managed cluster</em>.</td></tr>
+<tr><td><strong>Hosting cluster</strong></td><td>Synonym for management cluster</td><td>Sounds like <em>hosted cluster</em> but refers to the opposite role — it does the hosting.</td></tr>
+<tr><td><strong>Hub cluster</strong></td><td>Where ACM (MultiClusterHub) server components run</td><td>Often co-located with the management cluster, but not required. Hub ≠ management by definition.</td></tr>
+<tr><td><strong>Hosted cluster</strong></td><td>The entire logical OCP cluster: control plane pods on management cluster + worker nodes on separate infrastructure</td><td>Not just the workers — the whole cluster, even though the control plane runs elsewhere.</td></tr>
+<tr><td><strong>Hosted control plane</strong></td><td>Only the control-plane portion of a hosted cluster (etcd, API server, controller-manager, Konnectivity) running as pods</td><td>A <em>subset</em> of the hosted cluster.</td></tr>
+<tr><td><strong>Data plane</strong></td><td>Compute, storage, and networking where workloads run — the worker nodes</td><td>Lives on separate infrastructure from the control plane.</td></tr>
+<tr><td><strong>Hosted cluster infrastructure</strong></td><td>Network, compute, and storage resources in the tenant's environment</td><td>Where data-plane workers live, owned by the cluster consumer, not the provider.</td></tr>
+<tr><td><strong>Managed cluster</strong></td><td>An ACM/MCE concept — a cluster imported into the hub via ManifestWork</td><td>Completely different from <em>management cluster</em>. A managed cluster is a spoke; a management cluster is the hub that runs HCP.</td></tr>
+<tr><td><strong>HostedCluster CR</strong></td><td>Custom resource (<code>hypershift.openshift.io</code>) defining the control plane and data plane configuration, created on the management cluster</td><td>Creating this CR triggers deployment of the hosted control plane pods in a dedicated namespace.</td></tr>
+<tr><td><strong>NodePool CR</strong></td><td>Custom resource representing a scalable set of worker nodes attached to a HostedCluster, also lives on the management cluster</td><td>Defines how and where workers are provisioned (bare metal agents, VMs, cloud instances).</td></tr>
+</table>
+
+<div class="section-title">Three-Layer Architecture</div>
+<p style="margin-bottom:0.5rem"><a href="https://developers.redhat.com/articles/2026/07/08/demystify-architecture-openshift-hosted-control-planes" target="_blank" rel="noopener">Full article ↗</a></p>
+<p><strong>Layer 1 — The fundamental split</strong></p>
+<img src="https://developers.redhat.com/sites/default/files/styles/article_floated/public/image1_280.png?itok=H2IJj2ip" alt="Diagram showing the split between the management cluster (top) running hosted control plane pods, and the hosted cluster workers (bottom) on separate infrastructure" style="max-width:100%;border-radius:4px;margin:0.75rem 0" />
+<p>The management cluster runs MCE + the HyperShift Operator. When you create a <code>HostedCluster</code> CR, the operator provisions a dedicated namespace (<code>clusters-&lt;name&gt;</code>) containing etcd, kube-apiserver, kube-controller-manager, and a Konnectivity server. Worker nodes run on completely separate infrastructure and communicate back to the control plane exclusively through the Konnectivity tunnel — no direct network access to the management cluster is required from the workers.</p>
+
+<p><strong>Layer 2 — API resources and running pods</strong></p>
+<img src="https://developers.redhat.com/sites/default/files/styles/article_floated/public/image3_151.png?itok=Drs3F-nO" alt="Diagram showing how HostedCluster and NodePool CRs on the management cluster map to running control plane pods in a dedicated namespace" style="max-width:100%;border-radius:4px;margin:0.75rem 0" />
+<p>Both <code>HostedCluster</code> and <code>NodePool</code> CRs live on the management cluster. Creating a <code>HostedCluster</code> causes the HyperShift Operator to create the <code>clusters-&lt;name&gt;</code> namespace and deploy etcd (StatefulSet), kube-apiserver (Deployment), kube-controller-manager (Deployment), and the Konnectivity server. The workers have no awareness of these resources — they only know their API server endpoint.</p>
+
+<p><strong>Layer 3 — One management cluster, many hosted clusters</strong></p>
+<img src="https://developers.redhat.com/sites/default/files/styles/article_floated/public/image2_188.png?itok=rOEw8kXX" alt="Diagram of a management cluster hosting control planes for both bare metal (Agent provider) and KubeVirt (OpenShift Virtualization) workers simultaneously" style="max-width:100%;border-radius:4px;margin:0.75rem 0" />
+<p>A single management cluster can simultaneously host control planes for multiple clusters. In this example, Hosted Cluster Y uses the Agent provider (bare metal workers discovered via InfraEnv/Agent CRs), while Hosted Cluster Z uses OpenShift Virtualization (KubeVirt) to run workers as VMs. Each hosted control plane gets its own namespace with isolated etcd and API server, but shares the management cluster's compute.</p>
+
+<div class="section-title">Infrastructure Requirements by Platform</div>
+
+<div class="definition-card"><h4>Common to All Platforms</h4>
+<ul style="margin:0.4rem 0 0 1rem;padding:0">
+  <li><strong>MCE Operator:</strong> Required on the management cluster. Bundles and manages the HyperShift Operator. Can be installed standalone via OperatorHub — full ACM is not required.</li>
+  <li><strong>etcd storage (critical):</strong> Each hosted cluster runs an etcd StatefulSet on the management cluster backed by a PersistentVolume. WAL fsync p99 latency <strong>must stay below 10 ms</strong>. Failing this causes leader election instability, degraded API response, and risk of data corruption. With ten hosted clusters you may have ten etcd instances competing for I/O — validate with <code>fio</code> or <code>etcd-benchmark</code> under realistic multi-instance load before deploying.</li>
+  <li><strong>Load balancing:</strong> Each hosted cluster must expose its API server endpoint. Cloud platforms provision load balancers automatically; bare metal and OpenShift Virtualization require MetalLB.</li>
+  <li><strong>DNS:</strong> Each hosted cluster needs DNS entries for its API endpoint and a wildcard <code>*.apps</code> ingress record. Plan your DNS strategy (per-cluster records vs. wildcards) before provisioning the first cluster.</li>
+</ul></div>
+
+<div class="definition-card"><h4>Bare Metal — Additional Components</h4>
+<img src="https://developers.redhat.com/sites/default/files/styles/article_floated/public/image2_189.png?itok=QWlCRjIf" alt="Diagram of bare metal infrastructure components: MetalLB, storage, agent provider, and DNS" style="max-width:100%;border-radius:4px;margin:0.5rem 0" />
+<ul style="margin:0.4rem 0 0 1rem;padding:0">
+  <li><strong>MetalLB:</strong> Fills the cloud load-balancer gap. Install the MetalLB Operator on the management cluster and configure IP address pools. <em>L2 mode</em> uses ARP/NDP — simpler but a single node handles all traffic per VIP (bottleneck + failover delay). <em>BGP mode</em> peers with routers for multi-node distribution and faster failover, but requires BGP-capable routers and more config. Plan IP pools carefully — each hosted cluster needs at least one LoadBalancer IP for its API endpoint.</li>
+  <li><strong>Agent provider:</strong> Bare metal servers boot a discovery ISO generated by an <code>InfraEnv</code> CR, then appear as <code>Agent</code> CRs on the management cluster with hardware inventory. A <code>NodePool</code> references these agents and triggers RHCOS installation + cluster join.</li>
+  <li><strong>Network topology:</strong> Ensure workers can reach the management cluster's API endpoint for Konnectivity, DNS resolves hosted cluster API and ingress, and firewalls allow required ports.</li>
+</ul></div>
+
+<div class="definition-card"><h4>OpenShift Virtualization (KubeVirt) — Additional Decisions</h4>
+<img src="https://developers.redhat.com/sites/default/files/styles/article_floated/public/image1_282.png?itok=XOt5tLyY" alt="Diagram of KubeVirt infrastructure components: VM workers, networking options (overlay vs localnet), and storage" style="max-width:100%;border-radius:4px;margin:0.5rem 0" />
+<ul style="margin:0.4rem 0 0 1rem;padding:0">
+  <li><strong>Co-located vs. separate infrastructure cluster:</strong> Co-located (one cluster runs MCE, HyperShift, OpenShift Virtualization, and worker VMs) is simpler but causes resource contention between control plane pods and VMs. A separate infrastructure cluster for the VMs is recommended for production — better isolation, dedicated resources per role.</li>
+  <li><strong>Networking — Overlay (default pod network or UDN):</strong> VMs use OVN-Kubernetes overlay; simplest to configure. The downside: the hosted cluster's pod network runs <em>inside</em> VMs, which themselves run on the management cluster's pod network — double encapsulation makes troubleshooting harder and can impact performance.</li>
+  <li><strong>Networking — Localnet (VLAN):</strong> VMs attach directly to a physical VLAN via OVN-Kubernetes localnet topology. Avoids nested overlay, better performance, familiar network model. Trade-off: requires VLAN config on physical switches and <code>NodeNetworkConfigurationPolicy</code> (NNCP) resources on management cluster nodes.</li>
+  <li><strong>VM disk storage:</strong> Distinct from etcd storage. Focus is capacity and throughput rather than ultra-low latency. If co-locating, account for management cluster overhead + hosted control plane pods + worker VMs + OpenShift Virtualization operator overhead — all competing on the same cluster.</li>
+</ul></div>
+
+<div class="warn"><strong>⚠️ Pre-deployment checklist:</strong>
+<ul style="margin:0.4rem 0 0 1rem;padding:0">
+  <li>Validated storage backend meets etcd p99 &lt; 10 ms under multi-instance load?</li>
+  <li>Load balancing planned (MetalLB IP pools sized for all hosted clusters)?</li>
+  <li>DNS strategy defined (per-cluster records or wildcards)?</li>
+  <li>Resource quotas set to prevent any single hosted cluster from starving others (especially when co-locating VMs)?</li>
+</ul></div>
+
+<div class="tip"><strong>📖 Documentation:</strong> <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/hosted_control_planes/index" target="_blank" rel="noopener">Hosted Control Planes — OCP 4.21 Docs ↗</a></div>
 `},
 
 {id:'advanced-cli', label:'⚡ Advanced CLI Reference', content:`
