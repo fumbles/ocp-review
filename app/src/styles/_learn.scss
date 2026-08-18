@@ -96,6 +96,11 @@
   &__content {
     padding: 1.5rem 0;
   }
+
+  @media (max-width: 65.99rem) {
+    &__nav-scroll { max-height: 18rem; }
+    &__content { padding-block-start: 2rem; }
+  }
 }
 
 // ── Topic body — map old custom classes to Carbon tokens ─────────────────────
@@ -238,5 +243,11 @@
     tr:last-child td { border-bottom: none; }
 
     tr:hover td { background: var(--cds-background-hover); }
+
+    @media (max-width: 41.99rem) {
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
   }
 }

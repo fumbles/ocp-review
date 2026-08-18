@@ -64,8 +64,6 @@ function TaskRow({ task }) {
 
 // ── Detail view for one challenge ─────────────────────────────────────────────
 function ChallengeDetail({ exam, onBack }) {
-  const [allDone, setAllDone] = useState(false)
-
   return (
     <div className="ocp-pe__detail">
       <button className="ocp-wt__back" onClick={onBack}>

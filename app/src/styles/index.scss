@@ -34,13 +34,73 @@ body,
   background-color: var(--cds-background, #ffffff);
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
+  min-width: 20rem;
+  overflow-x: hidden;
 }
 
 // ── Content area fills the full viewport so background has no gap ─────────────
 .cds--content {
-  min-height: calc(100vh - 3rem); // 3rem = Carbon header height
+  min-height: calc(100dvh - 3rem); // 3rem = Carbon header height
+  overflow-x: clip;
+}
+
+// Custom controls should expose the same keyboard focus treatment as Carbon.
+button[class^='ocp-']:focus-visible,
+button[class*=' ocp-']:focus-visible,
+a[class^='ocp-']:focus-visible,
+a[class*=' ocp-']:focus-visible {
+  outline: 2px solid var(--cds-focus, #ee0000);
+  outline-offset: 2px;
+}
+
+.ocp-page-loading {
+  display: grid;
+  min-height: 40vh;
+  place-items: center;
+  color: var(--cds-text-secondary);
+}
+
+@media (max-width: 41.99rem) {
+  .cds--content {
+    padding-inline: 1rem;
+  }
+
+  .cds--header__name {
+    padding-inline-start: 0.75rem;
+  }
+
+  .cds--modal-container {
+    width: calc(100% - 1rem);
+    max-height: calc(100dvh - 1rem);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  button[class^='ocp-'],
+  button[class*=' ocp-'],
+  a[class^='ocp-'],
+  a[class*=' ocp-'] {
+    min-height: 2.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 // ── Utility ───────────────────────────────────────────────────────────────────

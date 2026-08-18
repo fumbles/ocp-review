@@ -1,6 +1,7 @@
 import {
   Header,
   HeaderName,
+  HeaderMenuButton,
   HeaderNavigation,
   HeaderMenuItem,
   HeaderGlobalBar,
@@ -14,15 +15,16 @@ import {
   Search,
 } from '@carbon/react'
 import { Asleep, Light, Search as SearchIcon } from '@carbon/icons-react'
-import { useState, useCallback } from 'react'
+import { lazy, Suspense, useState, useCallback } from 'react'
 
 import HomePage from './pages/HomePage'
-import LearnPage from './pages/LearnPage'
-import FlashcardsPage from './pages/FlashcardsPage'
-import WalkthroughsPage from './pages/WalkthroughsPage'
-import GlossaryPage from './pages/GlossaryPage'
-import TroubleshootingPage from './pages/TroubleshootingPage'
-import PracticeExamsPage from './pages/PracticeExamsPage'
+
+const LearnPage = lazy(() => import('./pages/LearnPage'))
+const FlashcardsPage = lazy(() => import('./pages/FlashcardsPage'))
+const WalkthroughsPage = lazy(() => import('./pages/WalkthroughsPage'))
+const GlossaryPage = lazy(() => import('./pages/GlossaryPage'))
+const TroubleshootingPage = lazy(() => import('./pages/TroubleshootingPage'))
+const PracticeExamsPage = lazy(() => import('./pages/PracticeExamsPage'))
 
 import { useHashRouter } from '../hooks/useHashRouter'
 import { useSearch } from '../hooks/useSearch'
@@ -64,7 +66,7 @@ export default function Shell({ theme, onToggleTheme }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [targetId, setTargetId] = useState(null)
 
-  const results = useSearch(searchQuery)
+  const { results, isLoading: searchLoading } = useSearch(searchQuery)
 
   const navigate = useCallback((id) => {
     routerNavigate(id)
@@ -91,6 +93,13 @@ export default function Shell({ theme, onToggleTheme }) {
     <>
       <Header aria-label="OCP Mastery">
         <SkipToContent />
+
+        <HeaderMenuButton
+          aria-label={sideNavOpen ? 'Close navigation' : 'Open navigation'}
+          aria-expanded={sideNavOpen}
+          isActive={sideNavOpen}
+          onClick={() => setSideNavOpen(open => !open)}
+        />
 
         <HeaderName prefix="" onClick={() => navigate('home')} style={{ cursor: 'pointer' }}>
           {/* Inline SVG OpenShift logo */}
@@ -164,7 +173,9 @@ export default function Shell({ theme, onToggleTheme }) {
       </Header>
 
       <Content id="main-content">
-        {PAGE_COMPONENTS(navigate, openSearch, targetId)[activePage]}
+        <Suspense fallback={<div className="ocp-page-loading" role="status">Loading study content…</div>}>
+          {PAGE_COMPONENTS(navigate, openSearch, targetId)[activePage]}
+        </Suspense>
       </Content>
 
       {/* ── Global search modal ── */}
@@ -192,14 +203,16 @@ export default function Shell({ theme, onToggleTheme }) {
             <p className="ocp-search-hint">Type at least 2 characters to search across all content.</p>
           )}
           {searchQuery.trim().length >= 2 && results.length === 0 && (
-            <p className="ocp-search-hint">No results for <strong>{searchQuery}</strong>.</p>
+            <p className="ocp-search-hint">
+              {searchLoading ? 'Searching all study content…' : <>No results for <strong>{searchQuery}</strong>.</>}
+            </p>
           )}
           {grouped.map(([pageLabel, items]) => (
             <div key={pageLabel} className="ocp-search-group">
               <div className="ocp-search-group__label">{pageLabel}</div>
-              {items.map(r => (
+              {items.map((r, index) => (
                 <button
-                  key={r.id}
+                  key={`${r.page}-${r.id}-${index}`}
                   className="ocp-search-result"
                   onClick={() => handleResultClick(r.page, r.id)}
                 >

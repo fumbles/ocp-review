@@ -155,4 +155,33 @@
     // Comment spans carried over from data
     .c { color: var(--cds-text-helper); font-style: italic; }
   }
+
+  @media (max-width: 41.99rem) {
+    .cds--col { margin-block-end: 1rem; }
+
+    &__detail { padding-block-start: 1rem; }
+
+    &__step {
+      gap: 0.75rem;
+      padding-block-end: 1.5rem;
+    }
+
+    &__step-num {
+      width: 30px;
+      height: 30px;
+    }
+
+    &__step::before {
+      left: 14px;
+      top: 30px;
+    }
+
+    &__step-body { min-width: 0; }
+
+    &__step-cmd {
+      white-space: pre;
+      word-break: normal;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
 }

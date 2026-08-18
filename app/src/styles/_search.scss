@@ -74,10 +74,24 @@
   }
 }
 
+@media (max-width: 41.99rem) {
+  .ocp-search-modal .cds--modal-content {
+    padding-inline: 1rem;
+  }
+
+  .ocp-search-results { max-height: 65dvh; }
+
+  .ocp-search-result__excerpt {
+    display: -webkit-box;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+
 // ── Hero search trigger ───────────────────────────────────────────────────────
 
 .ocp-hero__search-btn {
-  all: unset;       // strip button defaults
   display: block;
   width: 100%;
   max-width: 30rem;

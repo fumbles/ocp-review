@@ -215,4 +215,34 @@
       border-left: 3px solid #ee0000;
     }
   }
+
+  @media (max-width: 41.99rem) {
+    &__detail { padding-block-start: 1rem; }
+
+    &__task-item {
+      gap: 0.75rem;
+      padding-block-end: 1.5rem;
+    }
+
+    &__task-num {
+      width: 30px;
+      height: 30px;
+    }
+
+    &__task-item::before {
+      left: 14px;
+      top: 30px;
+    }
+
+    &__task-body { min-width: 0; }
+
+    &__task { padding: 0.875rem; }
+
+    &__reveal pre {
+      overflow-x: auto;
+      white-space: pre;
+      word-break: normal;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
 }

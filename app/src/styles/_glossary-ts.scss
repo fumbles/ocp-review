@@ -20,6 +20,30 @@
     margin-block-start: 0.6rem;
   }
 
+  @media (max-width: 41.99rem) {
+    &__sticky {
+      margin-inline: -1rem;
+      padding-inline: 1rem;
+    }
+
+    &__filters {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-block-end: 0.5rem;
+      scrollbar-width: thin;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    &__filter-btn {
+      flex: 0 0 auto;
+      min-height: 2.75rem;
+    }
+
+    &__cat-tag {
+      margin-left: 0;
+    }
+  }
+
   &__filter-btn {
     padding: 0.3rem 0.75rem;
     border-radius: 1rem;
@@ -213,6 +237,10 @@
     border-bottom: 1px solid var(--cds-border-subtle-01);
 
     &:last-child { border-bottom: none; }
+  }
+
+  @media (max-width: 41.99rem) {
+    &__subsection { padding-inline: 0; }
   }
 
   &__sub-label {

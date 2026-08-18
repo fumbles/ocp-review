@@ -70,6 +70,18 @@
   }
 }
 
+.ocp-external-links {
+  padding-block-end: 2rem;
+}
+
+.ocp-external-tile {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+}
+
 // ── Stats ─────────────────────────────────────────────────────────────────────
 .ocp-stats {
   padding-block: 1.5rem;
@@ -105,6 +117,31 @@
 .ocp-page-sub {
   color: var(--cds-text-secondary);
   margin-block-end: 1.5rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 41.99rem) {
+  .ocp-hero {
+    padding-block: 2rem 1.5rem;
+
+    &__heading { font-size: 2rem; }
+    &__sub { font-size: 0.9375rem; }
+  }
+
+  .ocp-feature-tile,
+  .ocp-external-tile {
+    padding: 1.25rem;
+  }
+
+  .ocp-feature-grid > .cds--col,
+  .ocp-external-links > .cds--col {
+    margin-block-end: 1rem;
+  }
+
+  .ocp-page-heading {
+    font-size: 1.5rem;
+    margin-block-start: 1.25rem;
+  }
 }
 
 // ── Placeholder tiles (stub pages) ───────────────────────────────────────────

@@ -73,7 +73,7 @@ export default function FlashcardsPage() {
   }
 
   function handleShuffle() {
-    setDeck(prev => shuffle(filter === 'all' ? allCards : allCards.filter(c => c.tag === filter)))
+    setDeck(() => shuffle(filter === 'all' ? allCards : allCards.filter(c => c.tag === filter)))
     setIndex(0)
     setChosen(null)
     setCorrect(0)

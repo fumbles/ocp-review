@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Grid, Column, Search, Accordion, AccordionItem, Tag } from '@carbon/react'
 import { glossaryTerms } from '../../data/glossary'
 
@@ -15,6 +15,10 @@ export default function GlossaryPage({ targetId }) {
   // When arriving from search, pre-fill the search box with the term name
   const [query, setQuery] = useState(targetId ?? '')
   const [activeFilter, setActiveFilter] = useState('all')
+
+  useEffect(() => {
+    if (targetId) setQuery(targetId)
+  }, [targetId])
 
   const filtered = useMemo(() => {
     let terms = glossaryTerms
@@ -83,9 +87,9 @@ export default function GlossaryPage({ targetId }) {
             <div key={letter} className="ocp-gl__letter-group" id={`gl-letter-${letter}`}>
               <div className="ocp-gl__letter">{letter}</div>
               <Accordion>
-                {byLetter[letter].map(t => (
+                {byLetter[letter].map((t, index) => (
                   <AccordionItem
-                    key={t.term}
+                    key={`${t.term}-${t.cat}-${index}`}
                     title={
                       <span className="ocp-gl__entry-header">
                         <span className="ocp-gl__term">{t.term}</span>

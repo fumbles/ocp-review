@@ -82,7 +82,7 @@ export default function HomePage({ onNavigate, onOpenSearch }) {
               resources, definitions, examples, flashcards, and step-by-step
               walkthroughs aligned to DO180.
             </p>
-            <button className="ocp-hero__search-btn" onClick={onOpenSearch}>
+            <div className="ocp-hero__search-btn" onClick={onOpenSearch}>
               <Search
                 id="hero-search-trigger"
                 labelText="Search all content"
@@ -90,8 +90,9 @@ export default function HomePage({ onNavigate, onOpenSearch }) {
                 size="lg"
                 readOnly
                 onClick={onOpenSearch}
+                onFocus={onOpenSearch}
               />
-            </button>
+            </div>
           </div>
         </Column>
       </Grid>

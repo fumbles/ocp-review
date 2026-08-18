@@ -1522,6 +1522,70 @@ oc describe clusteroperator etcd</pre>
 <div class="tip"><strong>📖 Docs:</strong> <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/backup_and_restore/index" target="_blank" rel="noopener">Backup and Restore — OCP 4.21 ↗</a></div>
 `},
 
+{id:'application-backup-recovery', label:'Application Backup & Recovery (OADP / Kasten / Veeam)', content:`
+<h3>Application Backup &amp; Recovery</h3>
+<p class="topic-desc">OpenShift data protection has several layers. OADP and Velero protect Kubernetes applications, Kasten adds policy-driven application and VM protection, and Veeam Backup &amp; Replication can provide centralized Kasten management and repository workflows. None of these replaces an etcd backup for control-plane disaster recovery.</p>
+
+<div class="section-title">Choose the Right Protection Layer</div>
+<table class="cmd-table">
+<thead><tr><th>Layer</th><th>Best fit</th><th>What it protects</th></tr></thead>
+<tbody>
+<tr><td>etcd backup</td><td>Recovering the OpenShift control plane</td><td>Cluster API state and static pod resources; not a portable application/PV backup</td></tr>
+<tr><td>OADP / Velero</td><td>Red Hat-integrated application backup</td><td>Kubernetes/OpenShift objects, internal images, and PV data through CSI snapshots or File System Backup</td></tr>
+<tr><td>Veeam Kasten (K10)</td><td>Policy-driven enterprise protection and mobility</td><td>Applications as Kubernetes resources plus storage; also supports VM-based policies for OpenShift Virtualization</td></tr>
+<tr><td>VBR + Kasten plug-in</td><td>Central Veeam operations and repository integration</td><td>Manages Kasten instances and policies, exposes restore points, and accepts supported Kasten PV exports into Veeam repositories</td></tr>
+</tbody>
+</table>
+<div class="warn"><strong>⚠️ Snapshot is not automatically a backup:</strong> A snapshot that exists only on the same storage system shares its failure domain. Use an export or independent backup location for protection against storage or cluster loss, and test restores regularly.</div>
+
+<div class="section-title">OADP and Velero Architecture</div>
+<div class="definition-card"><h4>OADP Operator</h4><p>The Red Hat-supported integration layer. A <code>DataProtectionApplication</code> (DPA) configures Velero, cloud and OpenShift plugins, backup storage locations, snapshot locations, credentials, and the node agent.</p></div>
+<div class="definition-card"><h4>Velero</h4><p>The Kubernetes-native engine underneath OADP. <code>Backup</code>, <code>Restore</code>, and <code>Schedule</code> CRs declare operations. Kubernetes object archives go to object storage; persistent data uses CSI/native snapshots or File System Backup.</p></div>
+<div class="definition-card"><h4>BackupStorageLocation and VolumeSnapshotLocation</h4><p>A BSL identifies durable object storage for resource archives and backup metadata. A VSL identifies a provider snapshot service. CSI snapshots can also be driven through the CSI plugin.</p></div>
+<div class="definition-card"><h4>File System Backup (FSB)</h4><p>The Velero node agent uses Kopia or Restic to copy files from mounted pod volumes when snapshots are unavailable or unsuitable. Track each transfer through <code>PodVolumeBackup</code> and <code>PodVolumeRestore</code> CRs.</p></div>
+
+<pre><span class="c"># OADP configuration and component health</span>
+oc get dataprotectionapplication -n openshift-adp
+oc get pods -n openshift-adp
+oc get backupstoragelocation,volumesnapshotlocation -n openshift-adp
+
+<span class="c"># Backup, schedule, and restore status</span>
+oc get backups.velero.io,schedules.velero.io,restores.velero.io -n openshift-adp
+oc describe backup.velero.io &lt;backup-name&gt; -n openshift-adp
+oc logs deployment/velero -n openshift-adp --tail=100
+
+<span class="c"># File System Backup data movement</span>
+oc get podvolumebackups.velero.io,podvolumerestores.velero.io -n openshift-adp
+oc get daemonset -n openshift-adp   <span class="c"># verify the node agent is scheduled</span></pre>
+
+<div class="section-title">Veeam Kasten (K10)</div>
+<div class="definition-card"><h4>Application-aware selection</h4><p>Kasten treats an application as its namespaced Kubernetes objects, associated cluster-scoped resources, workloads, Helm metadata, PVCs, and PVs. Policies can select whole namespaces, labels, or individual OpenShift Virtualization VMs.</p></div>
+<div class="definition-card"><h4>Policy</h4><p>A <code>Policy</code> CR defines selection, schedule, retention, snapshot/export actions, hooks, and exceptions. A local snapshot gives fast recovery; exporting through a Location Profile creates a durable restore point outside the source storage or cluster.</p></div>
+<div class="definition-card"><h4>Location Profile</h4><p>A <code>Profile</code> CR supplies credentials and destination details for object storage, NFS/SMB, Veeam Data Cloud Vault, or supported Veeam repository workflows. External profiles enable cross-cluster import, disaster recovery, and application mobility.</p></div>
+
+<pre><span class="c"># Kasten normally runs in kasten-io</span>
+oc get pods -n kasten-io
+oc get policies.config.kio.kasten.io -n kasten-io
+oc get profiles.config.kio.kasten.io -n kasten-io
+
+<span class="c"># Discover Kasten API resources available in this installed version</span>
+oc api-resources | grep -E 'kasten|kanister'</pre>
+
+<div class="section-title">Where VBR Fits</div>
+<p>Veeam Backup &amp; Replication is not a replacement implementation of Velero inside OpenShift. With the Veeam Plug-In for Kasten, VBR connects to Kasten, synchronizes its policies, snapshots, exports, and sessions, and offers recovery and monitoring from the VBR console. Supported Kasten exports can use Veeam repositories and then participate in broader Veeam repository, capacity-tier, archive, tape, and backup-copy workflows.</p>
+<div class="tip"><strong>💡 Practical design:</strong> Let the Kubernetes-native product understand the application and orchestrate snapshots/restores; use independent object storage or a backup repository for durability; define recovery-point and recovery-time objectives; and prove the design with scheduled restore tests.</div>
+
+<div class="section-title">OpenShift Virtualization Notes</div>
+<ul style="margin:0.4rem 0 0 1rem;padding:0">
+<li>OADP provides a <code>kubevirt</code> plugin for OpenShift Virtualization resources; VM disks are protected through CSI snapshots or File System Backup.</li>
+<li>Kasten supports VM-based policies for KubeVirt/OpenShift Virtualization so individual VMs can be protected without selecting an entire namespace.</li>
+<li>A <code>VirtualMachineSnapshot</code> is useful for short-term rollback but is not equivalent to an independently stored backup.</li>
+<li>For VBR integration, Kasten remains the Kubernetes-aware control plane; VBR supplies central management, recovery access, and supported repository workflows.</li>
+</ul>
+
+<div class="tip"><strong>📖 Docs:</strong> <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/backup_and_restore/oadp-application-backup-and-restore" target="_blank" rel="noopener">OADP — OCP 4.21 ↗</a> &nbsp;|&nbsp; <a href="https://velero.io/docs/" target="_blank" rel="noopener">Velero ↗</a> &nbsp;|&nbsp; <a href="https://docs.kasten.io/latest/usage/protect/" target="_blank" rel="noopener">Veeam Kasten ↗</a> &nbsp;|&nbsp; <a href="https://helpcenter.veeam.com/docs/vbr/userguide/kubernetes.html" target="_blank" rel="noopener">VBR Kubernetes Integration ↗</a></div>
+`},
+
 {id:'cluster-monitoring-config', label:'Monitoring & Alerting Config (EX380)', content:`
 <h3>Monitoring, Alerting &amp; Custom Metrics (EX380)</h3>
 <p class="topic-desc">EX380 tests deep knowledge of OpenShift's Prometheus-based monitoring stack: configuring retention, persistent storage, alert routing, and enabling user workload monitoring.</p>
@@ -2198,4 +2262,3 @@ oc logs -n openshift-storage \
 <div class="tip"><strong>📖 Docs:</strong> <a href="https://access.redhat.com/documentation/en-us/red_hat_openshift_data_foundation" target="_blank" rel="noopener">ODF Documentation ↗</a> &nbsp;|&nbsp; <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/storage/index" target="_blank" rel="noopener">OCP Storage — OCP 4.21 ↗</a></div>
 `},
 ];
-
