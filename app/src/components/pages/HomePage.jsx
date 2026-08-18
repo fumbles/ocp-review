@@ -129,7 +129,7 @@ export default function HomePage({ onNavigate, onOpenSearch }) {
         <Column lg={8} md={4} sm={4}>
           <ClickableTile
             className="ocp-external-tile"
-            href="https://rh-cert-map.wasmer.app/"
+            href="https://w4hf.github.io/rh-cert-map/"
             target="_blank"
             rel="noopener noreferrer"
           >
