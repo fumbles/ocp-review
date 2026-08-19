@@ -44,7 +44,7 @@ const FEATURE_CARDS = [
     id: 'troubleshooting',
     icon: <Debug size={32} />,
     title: 'Troubleshooting',
-    body: '12 sections of OpenShift & Kubernetes oc commands — basic triage through expert debugging.',
+    body: '13 sections and 181 OpenShift & Kubernetes oc commands — basic triage through expert debugging.',
   },
   {
     id: 'practice',
@@ -55,10 +55,10 @@ const FEATURE_CARDS = [
 ]
 
 const STATS = [
-  { num: '12',   label: 'Topic Areas' },
-  { num: '66',   label: 'Flashcards' },
-  { num: '17',   label: 'Walkthroughs' },
-  { num: '100+', label: 'oc Commands' },
+  { num: '26',   label: 'Topic Areas' },
+  { num: '101',  label: 'Flashcards' },
+  { num: '18',   label: 'Walkthroughs' },
+  { num: '181',  label: 'oc Commands' },
   { num: 'DO180',label: 'Aligned' },
 ]
 

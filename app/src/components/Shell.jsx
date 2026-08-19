@@ -41,12 +41,12 @@ const PAGES = [
 
 const PAGE_COMPONENTS = (navigate, onOpenSearch, targetId) => ({
   home:           <HomePage onNavigate={navigate} onOpenSearch={onOpenSearch} />,
-  learn:          <LearnPage targetId={targetId} />,
-  flashcards:     <FlashcardsPage />,
-  walkthroughs:   <WalkthroughsPage />,
+  learn:          <LearnPage targetId={targetId} onTargetChange={id => navigate('learn', id)} />,
+  flashcards:     <FlashcardsPage targetId={targetId} onTargetChange={id => navigate('flashcards', id)} />,
+  walkthroughs:   <WalkthroughsPage targetId={targetId} onTargetChange={id => navigate('walkthroughs', id)} />,
   glossary:       <GlossaryPage targetId={targetId} />,
-  troubleshooting:<TroubleshootingPage />,
-  practice:       <PracticeExamsPage />,
+  troubleshooting:<TroubleshootingPage targetId={targetId} onTargetChange={id => navigate('troubleshooting', id)} />,
+  practice:       <PracticeExamsPage targetId={targetId} onTargetChange={id => navigate('practice', id)} />,
 })
 
 // Group search results by page label
@@ -60,30 +60,27 @@ function groupResults(results) {
 }
 
 export default function Shell({ theme, onToggleTheme }) {
-  const { page: activePage, navigate: routerNavigate } = useHashRouter()
+  const { page: activePage, targetId, navigate: routerNavigate } = useHashRouter()
   const [sideNavOpen, setSideNavOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [targetId, setTargetId] = useState(null)
 
   const { results, isLoading: searchLoading } = useSearch(searchQuery)
 
-  const navigate = useCallback((id) => {
-    routerNavigate(id)
+  const navigate = useCallback((id, targetId = null) => {
+    routerNavigate(id, targetId)
     setSideNavOpen(false)
   }, [routerNavigate])
 
   const openSearch = () => {
     setSearchQuery('')
-    setTargetId(null)
     setSearchOpen(true)
   }
 
   const handleResultClick = (page, id) => {
     setSearchOpen(false)
     setSearchQuery('')
-    setTargetId(id)
-    navigate(page)
+    navigate(page, id)
   }
 
   const isDark = theme === 'g100'

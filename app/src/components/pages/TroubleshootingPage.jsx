@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Grid, Column, Search, Accordion, AccordionItem, Tag, CodeSnippet, Modal } from '@carbon/react'
 import { troubleshootingSections } from '../../data/troubleshooting'
 
@@ -10,9 +10,18 @@ const riskConfig = {
   'cluster-impacting': { label: 'Cluster-impacting', type: 'magenta' },
 }
 
-export default function TroubleshootingPage() {
+export default function TroubleshootingPage({ targetId, onTargetChange }) {
   const [query, setQuery] = useState('')
   const [expandedCommand, setExpandedCommand] = useState(null)
+
+  useEffect(() => {
+    if (!troubleshootingSections.some(sec => sec.id === targetId)) return
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(`ts-section-${targetId}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [targetId])
 
   const filtered = useMemo(() => {
     if (!query.trim()) return troubleshootingSections
@@ -70,7 +79,9 @@ export default function TroubleshootingPage() {
             {filtered.map(sec => (
               <AccordionItem
                 key={sec.id}
-                open={!!query.trim()}
+                id={`ts-section-${sec.id}`}
+                open={!!query.trim() || sec.id === targetId}
+                onHeadingClick={({ isOpen }) => onTargetChange?.(isOpen ? sec.id : null)}
                 title={
                   <span className="ocp-ts__sec-header">
                     <span className="ocp-ts__sec-icon">{sec.icon}</span>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Grid, Column, Tag } from '@carbon/react'
 import { ArrowLeft } from '@carbon/icons-react'
 import { walkthroughs } from '../../data/walkthroughs'
@@ -41,15 +41,33 @@ function WalkthroughDetail({ w, onBack }) {
   )
 }
 
-export default function WalkthroughsPage() {
-  const [activeId, setActiveId] = useState(null)
+export default function WalkthroughsPage({ targetId, onTargetChange }) {
+  const [activeId, setActiveId] = useState(() =>
+    walkthroughs.some(w => w.id === targetId) ? targetId : null
+  )
   const active = walkthroughs.find(w => w.id === activeId)
+
+  useEffect(() => {
+    setActiveId(walkthroughs.some(w => w.id === targetId) ? targetId : null)
+  }, [targetId])
+
+  const selectWalkthrough = id => {
+    setActiveId(id)
+    onTargetChange?.(id)
+    window.scrollTo(0, 0)
+  }
+
+  const showList = () => {
+    setActiveId(null)
+    onTargetChange?.(null)
+    window.scrollTo(0, 0)
+  }
 
   if (active) {
     return (
       <Grid>
         <Column lg={12} md={8} sm={4}>
-          <WalkthroughDetail w={active} onBack={() => { setActiveId(null); window.scrollTo(0, 0) }} />
+          <WalkthroughDetail w={active} onBack={showList} />
         </Column>
       </Grid>
     )
@@ -64,7 +82,7 @@ export default function WalkthroughsPage() {
         </Column>
         {walkthroughs.map(w => (
           <Column key={w.id} lg={5} md={4} sm={4}>
-            <WalkthroughCard w={w} onSelect={id => { setActiveId(id); window.scrollTo(0, 0) }} />
+          <WalkthroughCard w={w} onSelect={selectWalkthrough} />
           </Column>
         ))}
       </Grid>

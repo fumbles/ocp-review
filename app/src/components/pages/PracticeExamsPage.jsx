@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Grid, Column, Tag, Button } from '@carbon/react'
 import { ArrowLeft, Idea, Help, ChevronDown, ChevronUp, Checkmark, Launch } from '@carbon/icons-react'
 import { practiceExams } from '../../data/practiceExams'
@@ -95,7 +95,7 @@ function ChallengeDetail({ exam, onBack }) {
         </div>
       )}
 
-      <p className="ocp-pe__task-count">{exam.tasks.length} tasks — click a task title to expand hints &amp; solutions</p>
+      <p className="ocp-pe__task-count">{exam.tasks.length} tasks — use Hint or Solution when you need help</p>
 
       <ol className="ocp-pe__task-list">
         {exam.tasks.map((task, i) => (
@@ -128,9 +128,27 @@ function ChallengeCard({ exam, onSelect }) {
 }
 
 // ── Page root ─────────────────────────────────────────────────────────────────
-export default function PracticeExamsPage() {
-  const [activeId, setActiveId] = useState(null)
+export default function PracticeExamsPage({ targetId, onTargetChange }) {
+  const [activeId, setActiveId] = useState(() =>
+    practiceExams.some(exam => exam.id === targetId) ? targetId : null
+  )
   const active = practiceExams.find(e => e.id === activeId)
+
+  useEffect(() => {
+    setActiveId(practiceExams.some(exam => exam.id === targetId) ? targetId : null)
+  }, [targetId])
+
+  const selectChallenge = id => {
+    setActiveId(id)
+    onTargetChange?.(id)
+    window.scrollTo(0, 0)
+  }
+
+  const showList = () => {
+    setActiveId(null)
+    onTargetChange?.(null)
+    window.scrollTo(0, 0)
+  }
 
   if (active) {
     return (
@@ -138,7 +156,7 @@ export default function PracticeExamsPage() {
         <Column lg={12} md={8} sm={4}>
           <ChallengeDetail
             exam={active}
-            onBack={() => { setActiveId(null); window.scrollTo(0, 0) }}
+            onBack={showList}
           />
         </Column>
       </Grid>
@@ -159,7 +177,7 @@ export default function PracticeExamsPage() {
           <Column key={exam.id} lg={5} md={4} sm={4}>
             <ChallengeCard
               exam={exam}
-              onSelect={id => { setActiveId(id); window.scrollTo(0, 0) }}
+              onSelect={selectChallenge}
             />
           </Column>
         ))}

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   Grid,
   Column,
@@ -45,13 +45,29 @@ function shuffle(arr) {
   return a
 }
 
-export default function FlashcardsPage() {
+export default function FlashcardsPage({ targetId, onTargetChange }) {
   const [filter, setFilter] = useState('all')
   const [deck, setDeck] = useState(allCards)
   const [index, setIndex] = useState(0)
   const [chosen, setChosen] = useState(null)   // null = unanswered
   const [correct, setCorrect] = useState(0)
   const [wrong, setWrong] = useState(0)
+  const internalTargetRef = useRef(null)
+
+  useEffect(() => {
+    if (internalTargetRef.current === targetId) {
+      internalTargetRef.current = null
+      return
+    }
+    const match = /^fc-(\d+)$/.exec(targetId ?? '')
+    const targetIndex = match ? Number(match[1]) : -1
+    if (targetIndex >= 0 && targetIndex < allCards.length) {
+      setFilter('all')
+      setDeck(allCards)
+      setIndex(targetIndex)
+      setChosen(null)
+    }
+  }, [targetId])
 
   const filtered = useMemo(
     () => filter === 'all' ? deck : deck.filter(c => c.tag === filter),
@@ -63,6 +79,14 @@ export default function FlashcardsPage() {
   const isCorrect = answered && chosen === card.correct
   const progress = ((index + 1) / filtered.length) * 100
 
+  function updateTarget(cardToShow) {
+    const sourceIndex = allCards.indexOf(cardToShow)
+    if (sourceIndex < 0) return
+    const id = `fc-${sourceIndex}`
+    internalTargetRef.current = id
+    onTargetChange?.(id)
+  }
+
   function changeFilter(f) {
     setFilter(f)
     setIndex(0)
@@ -70,14 +94,17 @@ export default function FlashcardsPage() {
     setCorrect(0)
     setWrong(0)
     setDeck(allCards)
+    updateTarget(f === 'all' ? allCards[0] : allCards.find(c => c.tag === f))
   }
 
   function handleShuffle() {
-    setDeck(() => shuffle(filter === 'all' ? allCards : allCards.filter(c => c.tag === filter)))
+    const shuffled = shuffle(filter === 'all' ? allCards : allCards.filter(c => c.tag === filter))
+    setDeck(shuffled)
     setIndex(0)
     setChosen(null)
     setCorrect(0)
     setWrong(0)
+    updateTarget(shuffled[0])
   }
 
   function select(i) {
@@ -92,12 +119,14 @@ export default function FlashcardsPage() {
     if (nextIdx === 0) { setCorrect(0); setWrong(0) }
     setIndex(nextIdx)
     setChosen(null)
+    updateTarget(filtered[nextIdx])
   }
 
   function prev() {
     const prevIdx = (index - 1 + filtered.length) % filtered.length
     setIndex(prevIdx)
     setChosen(null)
+    updateTarget(filtered[prevIdx])
   }
 
   // Keyboard shortcuts: ← prev, → / Enter next (when answered), 1-4 select option

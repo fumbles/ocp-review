@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { Grid, Column, Search } from '@carbon/react'
 import { topics } from '../../data/topics'
 
-export default function LearnPage({ targetId }) {
+export default function LearnPage({ targetId, onTargetChange }) {
   const [activeId, setActiveId] = useState(() =>
     // If arriving from search with a known topic id, start on that topic
     targetId && topics.find(t => t.id === targetId) ? targetId : topics[0].id
@@ -62,7 +62,10 @@ export default function LearnPage({ targetId }) {
                   <button
                     key={t.id}
                     className={`ocp-learn__topic-item${t.id === visibleActive ? ' ocp-learn__topic-item--active' : ''}`}
-                    onClick={() => setActiveId(t.id)}
+                    onClick={() => {
+                      setActiveId(t.id)
+                      onTargetChange?.(t.id)
+                    }}
                   >
                     {t.label}
                   </button>
