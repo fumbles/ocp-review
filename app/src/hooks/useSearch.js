@@ -31,7 +31,21 @@ async function getIndex() {
     import('../data/walkthroughs'),
     import('../data/troubleshooting'),
     import('../data/practiceExams'),
-  ]).then(([glossary, learn, flashcards, walkthroughData, troubleshooting, practice]) => [
+    import('../data/certificationPaths'),
+    import('../data/visualMaps'),
+  ]).then(([glossary, learn, flashcards, walkthroughData, troubleshooting, practice, paths, visuals]) => [
+  // Visual maps
+  ...visuals.visualMaps.map(map => ({
+    page: 'visuals', pageLabel: 'Visual Maps', id: map.id,
+    title: map.title,
+    body: `${map.summary} ${map.mentalModel} ${map.stages.flatMap(stage => stage.nodes.map(node => `${node.label} ${node.subtitle} ${node.detail}`)).join(' ')}`,
+  })),
+  // Certification paths
+  ...paths.certificationPaths.map(path => ({
+    page: 'paths', pageLabel: 'Certification Paths', id: path.id,
+    title: `${path.code} — ${path.title}`,
+    body: `${path.summary} ${path.version} ${path.objectives.map(objective => objective.title).join(' ')}`,
+  })),
   // Glossary
   ...glossary.glossaryTerms.map(t => ({
     page: 'glossary', pageLabel: 'Glossary', id: t.term,

@@ -25,6 +25,9 @@ const WalkthroughsPage = lazy(() => import('./pages/WalkthroughsPage'))
 const GlossaryPage = lazy(() => import('./pages/GlossaryPage'))
 const TroubleshootingPage = lazy(() => import('./pages/TroubleshootingPage'))
 const PracticeExamsPage = lazy(() => import('./pages/PracticeExamsPage'))
+const LearningPathsPage = lazy(() => import('./pages/LearningPathsPage'))
+const ExamModePage = lazy(() => import('./pages/ExamModePage'))
+const VisualMapsPage = lazy(() => import('./pages/VisualMapsPage'))
 
 import { useHashRouter } from '../hooks/useHashRouter'
 import { useSearch } from '../hooks/useSearch'
@@ -37,6 +40,9 @@ const PAGES = [
   { id: 'glossary',       label: 'Glossary' },
   { id: 'troubleshooting',label: 'Troubleshooting' },
   { id: 'practice',       label: 'Practice' },
+  { id: 'paths',          label: 'Paths' },
+  { id: 'exam',           label: 'Exam' },
+  { id: 'visuals',        label: 'Visuals' },
 ]
 
 const PAGE_COMPONENTS = (navigate, onOpenSearch, targetId) => ({
@@ -47,6 +53,17 @@ const PAGE_COMPONENTS = (navigate, onOpenSearch, targetId) => ({
   glossary:       <GlossaryPage targetId={targetId} />,
   troubleshooting:<TroubleshootingPage targetId={targetId} onTargetChange={id => navigate('troubleshooting', id)} />,
   practice:       <PracticeExamsPage targetId={targetId} onTargetChange={id => navigate('practice', id)} />,
+  paths:          <LearningPathsPage
+    targetId={targetId}
+    onTargetChange={id => navigate('paths', id)}
+    onNavigateToTopic={id => navigate('learn', id)}
+  />,
+  exam:           <ExamModePage />,
+  visuals:        <VisualMapsPage
+    targetId={targetId}
+    onTargetChange={id => navigate('visuals', id)}
+    onNavigateToTopic={id => navigate('learn', id)}
+  />,
 })
 
 // Group search results by page label

@@ -1,0 +1,86 @@
+.ocp-paths {
+  padding-block-end: 3rem;
+
+  &__selector {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-block-end: 1.5rem;
+  }
+
+  &__selector-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+    min-height: 4.5rem;
+    padding: 0.875rem;
+    border: 1px solid var(--cds-border-subtle-01);
+    border-bottom: 3px solid transparent;
+    background: var(--cds-layer-01);
+    color: var(--cds-text-primary);
+    cursor: pointer;
+    text-align: left;
+
+    span { color: var(--cds-text-secondary); font-size: 0.75rem; }
+    &:hover { background: var(--cds-layer-hover-01); }
+    &--active { border-bottom-color: #ee0000; background: var(--cds-layer-selected-01); }
+  }
+
+  &__overview {
+    padding: 1.5rem;
+    margin-block-end: 2rem;
+    border-left: 4px solid #ee0000;
+    background: var(--cds-layer-01);
+
+    h3 { margin-block: 0.75rem 0.5rem; font-size: 1.5rem; }
+    > p { color: var(--cds-text-secondary); line-height: 1.6; }
+    .ocp-study-progress { margin-block: 1.5rem; }
+  }
+
+  &__tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+  &__source-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    color: var(--cds-text-helper);
+    font-size: 0.8rem;
+
+    a { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--cds-link-primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  }
+
+  &__objectives-heading { margin-block-end: 1rem; font-size: 1.25rem; }
+
+  &__objective {
+    height: calc(100% - 1rem);
+    padding: 1.25rem;
+    margin-block-end: 1rem;
+    border: 1px solid var(--cds-border-subtle-01);
+    background: var(--cds-layer-01);
+  }
+
+  &__objective-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-block-end: 0.75rem;
+
+    h4 { font-size: 1rem; line-height: 1.4; }
+  }
+
+  &__topic-links { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+  &__gap { color: var(--cds-text-secondary); font-size: 0.875rem; line-height: 1.5; }
+
+  @media (max-width: 65.99rem) {
+    &__selector { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 41.99rem) {
+    &__selector { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    &__overview { padding: 1.25rem; }
+    &__objective-heading { flex-direction: column; gap: 0.5rem; }
+  }
+}

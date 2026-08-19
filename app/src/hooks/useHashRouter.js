@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 
 const VALID_PAGES = new Set([
   'home', 'learn', 'flashcards', 'walkthroughs',
-  'glossary', 'troubleshooting', 'practice',
+  'glossary', 'troubleshooting', 'practice', 'paths', 'exam', 'visuals',
 ])
 
 function readHash() {

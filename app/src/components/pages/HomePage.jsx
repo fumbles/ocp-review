@@ -18,6 +18,12 @@ import { useStudyProgress } from '../../hooks/useStudyProgress'
 
 const FEATURE_CARDS = [
   {
+    id: 'paths',
+    icon: <Certificate size={32} />,
+    title: 'Certification Paths',
+    body: 'Focus the library on DO180, EX280, EX370, EX380, EX430, or EX432 and track objective coverage.',
+  },
+  {
     id: 'learn',
     icon: <Book size={32} />,
     title: 'Resource Library',
@@ -53,6 +59,18 @@ const FEATURE_CARDS = [
     title: 'Practice Challenges',
     body: 'Hands-on exam scenarios with progressive hints and full solutions — aligned to DO180 & EX280.',
   },
+  {
+    id: 'exam',
+    icon: <TaskComplete size={32} />,
+    title: 'Real Exam Mode',
+    body: 'Timed randomized assessments with flags, pass thresholds, score reports, and missed-objective review.',
+  },
+  {
+    id: 'visuals',
+    icon: <Catalog size={32} />,
+    title: 'Visual Maps',
+    body: 'Interactive architecture diagrams, topology maps, resource relationships, flows, and troubleshooting mental models.',
+  },
 ]
 
 const STATS = [
@@ -65,6 +83,7 @@ const STATS = [
 
 const PROGRESS_AREAS = [
   { id: 'learn', label: 'Library topics', total: 26 },
+  { id: 'flashcards', label: 'Flashcards reviewed', total: 101 },
   { id: 'walkthroughs', label: 'Walkthroughs', total: 18 },
   { id: 'practice', label: 'Practice tasks', total: 20 },
 ]
@@ -75,6 +94,7 @@ export default function HomePage({ onNavigate, onOpenSearch }) {
     .reduce((total, taskIds) => total + taskIds.length, 0)
   const progressCounts = {
     learn: Math.min(progress.topics.length, 26),
+    flashcards: Math.min(Object.values(progress.flashcards.records).filter(record => record.attempts > 0).length, 101),
     walkthroughs: Math.min(progress.walkthroughs.length, 18),
     practice: Math.min(completedPracticeTasks, 20),
   }
@@ -94,9 +114,9 @@ export default function HomePage({ onNavigate, onOpenSearch }) {
               Master <span className="ocp-brand-red">OpenShift</span> Administration
             </h1>
             <p className="ocp-hero__sub">
-              Comprehensive study hub for Red Hat OpenShift Administration I —
-              resources, definitions, examples, flashcards, and step-by-step
-              walkthroughs aligned to DO180.
+              A focused study hub for Red Hat OpenShift administration and specialist
+              certifications — resources, examples, flashcards, walkthroughs, and
+              objective-aligned learning paths.
             </p>
             <div className="ocp-hero__search-btn" onClick={onOpenSearch}>
               <Search
@@ -121,12 +141,13 @@ export default function HomePage({ onNavigate, onOpenSearch }) {
               <h2>Your study progress</h2>
               <p>Saved on this device as you complete topics, walkthroughs, and practice tasks.</p>
             </div>
+            <Tag type="cool-gray" size="sm">Current focus: {progress.selectedPath.toUpperCase()}</Tag>
           </div>
         </Column>
         {PROGRESS_AREAS.map(area => {
           const completed = progressCounts[area.id]
           return (
-            <Column key={area.id} lg={5} md={4} sm={4}>
+            <Column key={area.id} lg={4} md={4} sm={4}>
               <ClickableTile
                 className="ocp-progress-card"
                 onClick={() => onNavigate?.(area.id)}
