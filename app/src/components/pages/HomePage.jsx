@@ -14,6 +14,7 @@ import {
   Certificate,
   TaskComplete,
 } from '@carbon/icons-react'
+import { useStudyProgress } from '../../hooks/useStudyProgress'
 
 const FEATURE_CARDS = [
   {
@@ -62,7 +63,22 @@ const STATS = [
   { num: 'DO180',label: 'Aligned' },
 ]
 
+const PROGRESS_AREAS = [
+  { id: 'learn', label: 'Library topics', total: 26 },
+  { id: 'walkthroughs', label: 'Walkthroughs', total: 18 },
+  { id: 'practice', label: 'Practice tasks', total: 20 },
+]
+
 export default function HomePage({ onNavigate, onOpenSearch }) {
+  const { progress } = useStudyProgress()
+  const completedPracticeTasks = Object.values(progress.practiceTasks)
+    .reduce((total, taskIds) => total + taskIds.length, 0)
+  const progressCounts = {
+    learn: Math.min(progress.topics.length, 26),
+    walkthroughs: Math.min(progress.walkthroughs.length, 18),
+    practice: Math.min(completedPracticeTasks, 20),
+  }
+
   return (
     <div className="ocp-home">
       {/* ── Hero ── */}
@@ -95,6 +111,37 @@ export default function HomePage({ onNavigate, onOpenSearch }) {
             </div>
           </div>
         </Column>
+      </Grid>
+
+      {/* ── Saved study progress ── */}
+      <Grid className="ocp-progress-overview">
+        <Column lg={16} md={8} sm={4}>
+          <div className="ocp-progress-overview__heading">
+            <div>
+              <h2>Your study progress</h2>
+              <p>Saved on this device as you complete topics, walkthroughs, and practice tasks.</p>
+            </div>
+          </div>
+        </Column>
+        {PROGRESS_AREAS.map(area => {
+          const completed = progressCounts[area.id]
+          return (
+            <Column key={area.id} lg={5} md={4} sm={4}>
+              <ClickableTile
+                className="ocp-progress-card"
+                onClick={() => onNavigate?.(area.id)}
+              >
+                <div className="ocp-study-progress__summary">
+                  <span>{area.label}</span>
+                  <strong>{completed} / {area.total}</strong>
+                </div>
+                <div className="ocp-study-progress__track" aria-hidden="true">
+                  <span style={{ width: `${(completed / area.total) * 100}%` }} />
+                </div>
+              </ClickableTile>
+            </Column>
+          )
+        })}
       </Grid>
 
       {/* ── Feature cards ── */}

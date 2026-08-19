@@ -87,6 +87,12 @@
     }
   }
 
+  &__completion {
+    display: flex;
+    justify-content: flex-end;
+    margin-block-end: 1rem;
+  }
+
   &__no-results {
     padding: 1rem;
     color: var(--cds-text-helper);

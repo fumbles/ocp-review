@@ -2,15 +2,15 @@ import { useEffect, useState } from 'react'
 import { Grid, Column, Tag, Button } from '@carbon/react'
 import { ArrowLeft, Idea, Help, ChevronDown, ChevronUp, Checkmark, Launch } from '@carbon/icons-react'
 import { practiceExams } from '../../data/practiceExams'
+import { useStudyProgress } from '../../hooks/useStudyProgress'
 
 // ── Tag colour map ────────────────────────────────────────────────────────────
 const LEVEL_TAG = { green: 'green', teal: 'teal', purple: 'purple' }
 
 // ── Single task row inside a challenge detail view ───────────────────────────
-function TaskRow({ task }) {
+function TaskRow({ task, done, onToggle }) {
   const [hintOpen, setHintOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
-  const [done, setDone] = useState(false)
 
   return (
     <div className={`ocp-pe__task${done ? ' ocp-pe__task--done' : ''}`}>
@@ -18,7 +18,7 @@ function TaskRow({ task }) {
         <button
           className="ocp-pe__task-check"
           aria-label={done ? 'Mark incomplete' : 'Mark complete'}
-          onClick={() => setDone(d => !d)}
+          onClick={onToggle}
         >
           <Checkmark size={16} />
         </button>
@@ -63,7 +63,8 @@ function TaskRow({ task }) {
 }
 
 // ── Detail view for one challenge ─────────────────────────────────────────────
-function ChallengeDetail({ exam, onBack }) {
+function ChallengeDetail({ exam, onBack, completedTaskIds, onToggleTask }) {
+  const completedCount = exam.tasks.filter(task => completedTaskIds.has(task.id)).length
   return (
     <div className="ocp-pe__detail">
       <button className="ocp-wt__back" onClick={onBack}>
@@ -95,7 +96,17 @@ function ChallengeDetail({ exam, onBack }) {
         </div>
       )}
 
-      <p className="ocp-pe__task-count">{exam.tasks.length} tasks — use Hint or Solution when you need help</p>
+      <div className="ocp-study-progress" aria-label={`${completedCount} of ${exam.tasks.length} tasks completed`}>
+        <div className="ocp-study-progress__summary">
+          <span>Challenge progress</span>
+          <strong>{completedCount} / {exam.tasks.length}</strong>
+        </div>
+        <div className="ocp-study-progress__track" aria-hidden="true">
+          <span style={{ width: `${(completedCount / exam.tasks.length) * 100}%` }} />
+        </div>
+      </div>
+
+      <p className="ocp-pe__task-count">Use Hint or Solution when you need help. Completed tasks are saved on this device.</p>
 
       <ol className="ocp-pe__task-list">
         {exam.tasks.map((task, i) => (
@@ -103,7 +114,11 @@ function ChallengeDetail({ exam, onBack }) {
             <div className="ocp-pe__task-num">{i + 1}</div>
             <div className="ocp-pe__task-body">
               <h4 className="ocp-pe__task-title">{task.title}</h4>
-              <TaskRow task={task} />
+              <TaskRow
+                task={task}
+                done={completedTaskIds.has(task.id)}
+                onToggle={() => onToggleTask(task.id)}
+              />
             </div>
           </li>
         ))}
@@ -113,22 +128,25 @@ function ChallengeDetail({ exam, onBack }) {
 }
 
 // ── Card on the list view ─────────────────────────────────────────────────────
-function ChallengeCard({ exam, onSelect }) {
+function ChallengeCard({ exam, onSelect, completedCount }) {
+  const complete = completedCount === exam.tasks.length
   return (
     <button className="ocp-wt__card ocp-pe__card" onClick={() => onSelect(exam.id)}>
       <div className="ocp-pe__card-tags">
         <Tag type={LEVEL_TAG[exam.levelType]} size="sm">{exam.level}</Tag>
         <Tag type="cool-gray" size="sm">{exam.source}</Tag>
+        {complete && <Tag type="green" size="sm">Completed</Tag>}
       </div>
       <h4 className="ocp-wt__card-title">{exam.title}</h4>
       <p className="ocp-wt__card-desc">{exam.desc}</p>
-      <span className="ocp-wt__step-count">{exam.tasks.length} tasks</span>
+      <span className="ocp-wt__step-count">{completedCount} / {exam.tasks.length} tasks completed</span>
     </button>
   )
 }
 
 // ── Page root ─────────────────────────────────────────────────────────────────
 export default function PracticeExamsPage({ targetId, onTargetChange }) {
+  const { progress, togglePracticeTask } = useStudyProgress()
   const [activeId, setActiveId] = useState(() =>
     practiceExams.some(exam => exam.id === targetId) ? targetId : null
   )
@@ -157,6 +175,8 @@ export default function PracticeExamsPage({ targetId, onTargetChange }) {
           <ChallengeDetail
             exam={active}
             onBack={showList}
+            completedTaskIds={new Set(progress.practiceTasks[active.id] || [])}
+            onToggleTask={taskId => togglePracticeTask(active.id, taskId)}
           />
         </Column>
       </Grid>
@@ -178,6 +198,7 @@ export default function PracticeExamsPage({ targetId, onTargetChange }) {
             <ChallengeCard
               exam={exam}
               onSelect={selectChallenge}
+              completedCount={exam.tasks.filter(task => (progress.practiceTasks[exam.id] || []).includes(task.id)).length}
             />
           </Column>
         ))}

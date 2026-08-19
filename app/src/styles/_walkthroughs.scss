@@ -24,6 +24,12 @@
     }
   }
 
+  &__card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
   &__card-title {
     font-size: 1rem;
     font-weight: 600;
@@ -76,6 +82,10 @@
     color: var(--cds-text-secondary);
     margin-block-end: 2rem;
     line-height: 1.6;
+  }
+
+  &__complete-btn {
+    margin-block: -1rem 1.75rem;
   }
 
   &__steps {
