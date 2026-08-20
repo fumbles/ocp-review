@@ -4,3 +4,6 @@
 app/node_modules/
 app/dist/
 .playwright-mcp/
+ENHANCEMENT_PLAN.md
+.odo
+devfile.yaml

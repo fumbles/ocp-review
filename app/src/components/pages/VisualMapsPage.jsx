@@ -28,6 +28,9 @@ export default function VisualMapsPage({ targetId, onTargetChange, onNavigateToT
   const [selectedNodeId, setSelectedNodeId] = useState(allNodes[0].id)
   const selectedNode = allNodes.find(node => node.id === selectedNodeId) || allNodes[0]
   const selectedIndex = allNodes.findIndex(node => node.id === selectedNode.id)
+  const referenceImageUrl = activeMap.referenceImage
+    ? `${import.meta.env.BASE_URL}${activeMap.referenceImage}`
+    : null
 
   useEffect(() => {
     if (visualMaps.some(map => map.id === targetId)) setActiveId(targetId)
@@ -111,6 +114,26 @@ export default function VisualMapsPage({ targetId, onTargetChange, onNavigateToT
             <div className="ocp-visuals__mental-model">
               <strong>Remember it like this:</strong> {activeMap.mentalModel}
             </div>
+
+            {referenceImageUrl && (
+              <figure className="ocp-visuals__reference">
+                <div className="ocp-visuals__reference-header">
+                  <div>
+                    <span>Detailed reference diagram</span>
+                    <h4>{activeMap.referenceImageTitle}</h4>
+                  </div>
+                  <a href={referenceImageUrl} target="_blank" rel="noopener noreferrer">Open full size <Launch size={14} /></a>
+                </div>
+                <div className="ocp-visuals__reference-scroll">
+                  <a href={referenceImageUrl} target="_blank" rel="noopener noreferrer" aria-label={`Open ${activeMap.referenceImageTitle} full size`}>
+                    <img src={referenceImageUrl} alt={activeMap.referenceImageAlt} loading="lazy" />
+                  </a>
+                </div>
+                <figcaption>{activeMap.referenceImageCaption} <span>On a phone, swipe the diagram or open it full size.</span></figcaption>
+              </figure>
+            )}
+
+            {activeMap.layout === 'three-node' && <h4 className="ocp-visuals__section-heading">Interactive three-node study map</h4>}
 
             {activeMap.layout === 'three-node' ? (
               <div className="ocp-visuals__topology" role="group" aria-label={`${activeMap.title} diagram`}>

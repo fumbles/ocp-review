@@ -4,6 +4,9 @@ export const visualMaps = [
     summary: 'See how users, control plane services, and worker nodes cooperate.',
     mentalModel: 'The control plane decides and records; worker nodes execute.',
     sourceUrl: 'https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/architecture/control-plane',
+    sourceLabel: 'Red Hat control plane architecture',
+    secondarySourceUrl: 'https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/architecture/index#architecture-platform-introduction_architecture',
+    secondarySourceLabel: 'Red Hat architecture visual guide',
     topicId: 'k8s-arch',
     stages: [
       { label: 'People & automation', nodes: [
@@ -73,6 +76,10 @@ export const visualMaps = [
     secondarySourceUrl: 'https://ovn-kubernetes.io/design/topology/',
     secondarySourceLabel: 'OVN-Kubernetes topology design',
     sourceNote: 'Original interactive synthesis based on current Red Hat and OVN-Kubernetes documentation.',
+    referenceImage: 'visuals/ovn-kubernetes-ovs-traffic-flow.webp',
+    referenceImageAlt: 'Two-node OVN-Kubernetes traffic flow showing pods connected through veth pairs and Open vSwitch, the OVN control plane databases, logical switches and router, a Geneve overlay tunnel, and the physical underlay network.',
+    referenceImageTitle: 'OVN-Kubernetes / OVS detailed traffic flow',
+    referenceImageCaption: 'Two-node reference view. Follow Pod A through veth, OVS, the OVN logical switches and router, the Geneve overlay, and OVS on Node 2 to Pod B. Addresses are illustrative.',
     topicId: 'networking-advanced',
     layout: 'three-node',
     shared: {
